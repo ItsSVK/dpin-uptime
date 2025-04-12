@@ -3,6 +3,10 @@ export interface SignupIncomingMessage {
   publicKey: string;
   signedMessage: string;
   callbackId: string;
+  country: string;
+  city: string;
+  latitude: number;
+  longitude: number;
 }
 
 export interface ValidateIncomingMessage {
@@ -17,6 +21,11 @@ export interface ValidateIncomingMessage {
 export interface SignupOutgoingMessage {
   validatorId: string;
   callbackId: string;
+  ip: string;
+  country: string;
+  city: string;
+  latitude: number;
+  longitude: number;
 }
 
 export interface ValidateOutgoingMessage {
@@ -25,22 +34,57 @@ export interface ValidateOutgoingMessage {
   websiteId: string;
 }
 
+export enum MessageType {
+  SIGNUP = 'signup',
+  VALIDATE = 'validate',
+  HEARTBEAT = 'heartbeat',
+}
+
 export type IncomingMessage =
   | {
-      type: 'signup';
+      type: MessageType.SIGNUP;
       data: SignupIncomingMessage;
     }
   | {
-      type: 'validate';
+      type: MessageType.VALIDATE;
       data: ValidateIncomingMessage;
+    }
+  | {
+      type: MessageType.HEARTBEAT;
     };
 
 export type OutgoingMessage =
   | {
-      type: 'signup';
+      type: MessageType.SIGNUP;
       data: SignupOutgoingMessage;
     }
   | {
-      type: 'validate';
+      type: MessageType.VALIDATE;
       data: ValidateOutgoingMessage;
     };
+
+export interface Validator {
+  id: string;
+  publicKey: string;
+  ip: string;
+  country: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  pendingPayouts: number;
+  ticks: WebsiteTick[];
+}
+
+export interface WebsiteTick {
+  id: string;
+  websiteId: string;
+  validatorId: string;
+  createdAt: Date;
+  status: WebsiteStatus;
+  latency: number;
+}
+
+export enum WebsiteStatus {
+  GOOD = 'good',
+  BAD = 'bad',
+}

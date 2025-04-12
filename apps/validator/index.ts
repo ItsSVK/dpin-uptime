@@ -4,6 +4,7 @@ import type {
   SignupOutgoingMessage,
   ValidateOutgoingMessage,
 } from 'common/types';
+import { MessageType } from 'common/types';
 import { Keypair } from '@solana/web3.js';
 import nacl from 'tweetnacl';
 import nacl_util from 'tweetnacl-util';
@@ -17,24 +18,16 @@ let validatorId: string | null = null;
 
 async function main() {
   const keypair = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY!));
-  const ws = new WebSocket('ws://localhost:8081');
+  const ws = new WebSocket(process.env.HUB_URL!);
 
-  ws.onmessage = async event => {
-    const data: OutgoingMessage = JSON.parse(event.data);
-    if (data.type === 'signup') {
-      CALLBACKS[data.data.callbackId]?.(data.data);
-      delete CALLBACKS[data.data.callbackId];
-    } else if (data.type === 'validate') {
-      await validateHandler(ws, data.data, keypair);
-    }
-  };
-
+  // check if the websocket is running
   ws.onopen = async () => {
     console.log('Connected to hub, signing up');
     const callbackId = randomUUIDv7();
     CALLBACKS[callbackId] = (data: SignupOutgoingMessage) => {
       validatorId = data.validatorId;
     };
+
     const signedMessage = await signMessage(
       `Signed message for ${callbackId}, ${keypair.publicKey}`,
       keypair
@@ -42,16 +35,46 @@ async function main() {
 
     ws.send(
       JSON.stringify({
-        type: 'signup',
+        type: MessageType.SIGNUP,
         data: {
           callbackId,
           ip: '127.0.0.1',
+          country: 'US',
+          city: 'New York',
+          latitude: 40.7128,
+          longitude: -74.006,
           publicKey: keypair.publicKey,
           signedMessage,
         },
       })
     );
   };
+
+  ws.onmessage = async event => {
+    const data: OutgoingMessage = JSON.parse(event.data);
+    if (data.type === MessageType.SIGNUP) {
+      CALLBACKS[data.data.callbackId]?.(data.data);
+      delete CALLBACKS[data.data.callbackId];
+    } else if (data.type === MessageType.VALIDATE) {
+      await validateHandler(ws, data.data, keypair);
+    }
+  };
+
+  ws.onerror = event => {
+    console.error('Error from hub:', event);
+  };
+
+  ws.onclose = () => {
+    console.log('Disconnected from hub');
+    process.exit(1);
+  };
+
+  // This code sends a heartbeat message to the websocket server every 10 seconds
+  // to keep the connection alive and let the server know the validator is still running
+  setInterval(async () => {
+    console.log('Sending heartbeat');
+    ws.send(JSON.stringify({ type: MessageType.HEARTBEAT }));
+  }, 10000);
 }
 
 async function validateHandler(
@@ -61,10 +84,15 @@ async function validateHandler(
 ) {
   console.log(`Validating ${url}`);
   const startTime = Date.now();
-  const signature = await signMessage(`Replying to ${callbackId}`, keypair);
+  const signedMessage = await signMessage(`Replying to ${callbackId}`, keypair);
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
     const endTime = Date.now();
     const latency = endTime - startTime;
     const status = response.status;
@@ -73,28 +101,28 @@ async function validateHandler(
     console.log(status);
     ws.send(
       JSON.stringify({
-        type: 'validate',
+        type: MessageType.VALIDATE,
         data: {
           callbackId,
-          status: status === 200 ? 'Good' : 'Bad',
+          status,
           latency,
           websiteId,
           validatorId,
-          signedMessage: signature,
+          signedMessage,
         },
       })
     );
   } catch (error) {
     ws.send(
       JSON.stringify({
-        type: 'validate',
+        type: MessageType.VALIDATE,
         data: {
           callbackId,
-          status: 'Bad',
+          status: 500,
           latency: 1000,
           websiteId,
           validatorId,
-          signedMessage: signature,
+          signedMessage,
         },
       })
     );
@@ -110,5 +138,3 @@ async function signMessage(message: string, keypair: Keypair) {
 }
 
 main();
-
-setInterval(async () => {}, 10000);

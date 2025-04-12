@@ -29,7 +29,10 @@ model Website {
 model Validator {
   id             String        @id @default(uuid())
   publicKey      String
-  location       String
+  country        String
+  city           String
+  latitude       Float
+  longitude      Float
   ip             String
   pendingPayouts Int           @default(0)
   ticks          WebsiteTick[]
@@ -47,6 +50,6 @@ model WebsiteTick {
 }
 
 enum WebsiteStatus {
-  Good
-  Bad
+  GOOD
+  BAD
 }

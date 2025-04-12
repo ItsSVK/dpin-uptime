@@ -1,9 +1,20 @@
 import { randomUUIDv7, type ServerWebSocket } from 'bun';
-import type { IncomingMessage, SignupIncomingMessage } from 'common/types';
+import type {
+  IncomingMessage,
+  SignupIncomingMessage,
+  Validator,
+  WebsiteTick,
+} from 'common/types';
+import { MessageType, WebsiteStatus } from 'common/types';
 import { prismaClient } from 'db/client';
 import { PublicKey } from '@solana/web3.js';
 import nacl from 'tweetnacl';
 import nacl_util from 'tweetnacl-util';
+import type {
+  Validator as PrismaValidator,
+  WebsiteStatus as PrismaWebsiteStatusType,
+} from '@prisma/client';
+import { WebsiteStatus as PrismaWebsiteStatus } from '@prisma/client';
 
 const availableValidators: {
   validatorId: string;
@@ -13,6 +24,31 @@ const availableValidators: {
 
 const CALLBACKS: { [callbackId: string]: (data: IncomingMessage) => void } = {};
 const COST_PER_VALIDATION = 100; // in lamports
+
+const mapToPrismaStatus = (status: WebsiteStatus): PrismaWebsiteStatus => {
+  return status === WebsiteStatus.GOOD
+    ? PrismaWebsiteStatus.GOOD
+    : PrismaWebsiteStatus.BAD;
+};
+
+const mapFromPrismaStatus = (status: PrismaWebsiteStatus): WebsiteStatus => {
+  return status === PrismaWebsiteStatus.GOOD
+    ? WebsiteStatus.GOOD
+    : WebsiteStatus.BAD;
+};
+
+const mapToValidator = (
+  prismaValidator: (PrismaValidator & { ticks: any[] }) | null
+): Validator | null => {
+  if (!prismaValidator) return null;
+  return {
+    ...prismaValidator,
+    ticks: prismaValidator.ticks.map(tick => ({
+      ...tick,
+      status: mapFromPrismaStatus(tick.status),
+    })) as WebsiteTick[],
+  };
+};
 
 Bun.serve({
   fetch(req, server) {
@@ -26,7 +62,7 @@ Bun.serve({
     async message(ws: ServerWebSocket<unknown>, message: string) {
       const data: IncomingMessage = JSON.parse(message);
 
-      if (data.type === 'signup') {
+      if (data.type === MessageType.SIGNUP) {
         const verified = await verifyMessage(
           `Signed message for ${data.data.callbackId}, ${data.data.publicKey}`,
           data.data.publicKey,
@@ -35,9 +71,11 @@ Bun.serve({
         if (verified) {
           await signupHandler(ws, data.data);
         }
-      } else if (data.type === 'validate') {
+      } else if (data.type === MessageType.VALIDATE) {
         CALLBACKS[data.data.callbackId](data);
         delete CALLBACKS[data.data.callbackId];
+      } else if (data.type === MessageType.HEARTBEAT) {
+        // do nothing
       }
     },
     async close(ws: ServerWebSocket<unknown>) {
@@ -51,18 +89,52 @@ Bun.serve({
 
 async function signupHandler(
   ws: ServerWebSocket<unknown>,
-  { ip, publicKey, signedMessage, callbackId }: SignupIncomingMessage
+  {
+    ip,
+    publicKey,
+    callbackId,
+    country,
+    city,
+    latitude,
+    longitude,
+  }: SignupIncomingMessage
 ) {
-  const validatorDb = await prismaClient.validator.findFirst({
-    where: {
-      publicKey,
-    },
-  });
+  let validatorDb: Validator | null = null;
+
+  validatorDb = mapToValidator(
+    await prismaClient.validator.findFirst({
+      where: {
+        publicKey,
+      },
+      include: {
+        ticks: true,
+      },
+    })
+  );
+
+  if (!validatorDb) {
+    validatorDb = mapToValidator(
+      await prismaClient.validator.create({
+        data: {
+          ip,
+          publicKey,
+          country,
+          city,
+          latitude,
+          longitude,
+          ticks: { create: [] },
+        },
+        include: {
+          ticks: true,
+        },
+      })
+    );
+  }
 
   if (validatorDb) {
     ws.send(
       JSON.stringify({
-        type: 'signup',
+        type: MessageType.SIGNUP,
         data: {
           validatorId: validatorDb.id,
           callbackId,
@@ -77,31 +149,6 @@ async function signupHandler(
     });
     return;
   }
-
-  //TODO: Given the ip, return the location
-  const validator = await prismaClient.validator.create({
-    data: {
-      ip,
-      publicKey,
-      location: 'unknown',
-    },
-  });
-
-  ws.send(
-    JSON.stringify({
-      type: 'signup',
-      data: {
-        validatorId: validator.id,
-        callbackId,
-      },
-    })
-  );
-
-  availableValidators.push({
-    validatorId: validator.id,
-    socket: ws,
-    publicKey: validator.publicKey,
-  });
 }
 
 async function verifyMessage(
@@ -126,6 +173,10 @@ setInterval(async () => {
     },
   });
 
+  if (availableValidators.length === 0) {
+    return;
+  }
+
   console.log(`Sending validate to ${availableValidators.length} validators`);
 
   for (const website of websitesToMonitor) {
@@ -136,7 +187,7 @@ setInterval(async () => {
       );
       validator.socket.send(
         JSON.stringify({
-          type: 'validate',
+          type: MessageType.VALIDATE,
           data: {
             url: website.url,
             callbackId,
@@ -145,7 +196,7 @@ setInterval(async () => {
       );
 
       CALLBACKS[callbackId] = async (data: IncomingMessage) => {
-        if (data.type === 'validate') {
+        if (data.type === MessageType.VALIDATE) {
           const { validatorId, status, latency, signedMessage } = data.data;
           const verified = await verifyMessage(
             `Replying to ${callbackId}`,
@@ -161,7 +212,7 @@ setInterval(async () => {
               data: {
                 websiteId: website.id,
                 validatorId,
-                status,
+                status: mapToPrismaStatus(status as WebsiteStatus),
                 latency,
                 createdAt: new Date(),
               },

@@ -3,29 +3,57 @@ import { authMiddleware } from './middleware';
 import { prismaClient } from 'db/client';
 import cors from 'cors';
 import { Transaction, SystemProgram, Connection } from '@solana/web3.js';
-
+import type { Website } from '@prisma/client';
 const connection = new Connection('https://api.mainnet-beta.solana.com');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+function formatUrl(url: string) {
+  // format the url also check for trailing slashes and www
+  url = url.startsWith('http') ? url : `https://${url}`;
+  if (!url.endsWith('/')) {
+    url += '/';
+  }
+
+  if (url.includes('www.')) {
+    url = url.replace('www.', '');
+  }
+
+  return url;
+}
+
 app.post(
   '/api/v1/website',
   authMiddleware,
   async (req: express.Request, res: express.Response) => {
     const userId = req.userId!;
-    const { url } = req.body;
+    let { url } = req.body;
 
-    const data = await prismaClient.website.create({
-      data: {
-        userId,
+    let website: Website | null = null;
+
+    url = formatUrl(url);
+
+    // Check if the website is already monitored
+    website = await prismaClient.website.findFirst({
+      where: {
         url,
+        userId,
       },
     });
 
+    if (!website) {
+      website = await prismaClient.website.create({
+        data: {
+          userId,
+          url,
+        },
+      });
+    }
+
     res.json({
-      id: data.id,
+      id: website.id,
     });
   }
 );
