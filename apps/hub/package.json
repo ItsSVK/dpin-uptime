@@ -2,11 +2,17 @@
   "name": "hub",
   "module": "index.ts",
   "type": "module",
-  "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "common": "*",
+    "db": "*"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@solana/kit": "^2.1.0",
+    "@solana/web3.js": "^1.98.0",
+    "tweetnacl": "^1.0.3"
   }
 }
