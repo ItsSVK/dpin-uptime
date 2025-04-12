@@ -95,16 +95,16 @@ async function validateHandler(
     });
     const endTime = Date.now();
     const latency = endTime - startTime;
-    const status = response.status;
+    const statusCode = response.status;
 
     console.log(url);
-    console.log(status);
+    console.log(statusCode);
     ws.send(
       JSON.stringify({
         type: MessageType.VALIDATE,
         data: {
           callbackId,
-          status,
+          statusCode,
           latency,
           websiteId,
           validatorId,
@@ -118,7 +118,7 @@ async function validateHandler(
         type: MessageType.VALIDATE,
         data: {
           callbackId,
-          status: 500,
+          statusCode: 500,
           latency: 1000,
           websiteId,
           validatorId,

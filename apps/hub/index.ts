@@ -197,7 +197,7 @@ setInterval(async () => {
 
       CALLBACKS[callbackId] = async (data: IncomingMessage) => {
         if (data.type === MessageType.VALIDATE) {
-          const { validatorId, status, latency, signedMessage } = data.data;
+          const { validatorId, statusCode, latency, signedMessage } = data.data;
           const verified = await verifyMessage(
             `Replying to ${callbackId}`,
             validator.publicKey,
@@ -212,7 +212,10 @@ setInterval(async () => {
               data: {
                 websiteId: website.id,
                 validatorId,
-                status: mapToPrismaStatus(status as WebsiteStatus),
+                status:
+                  statusCode >= 200 && statusCode < 400
+                    ? PrismaWebsiteStatus.GOOD
+                    : PrismaWebsiteStatus.BAD,
                 latency,
                 createdAt: new Date(),
               },
