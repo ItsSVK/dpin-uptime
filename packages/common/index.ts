@@ -62,29 +62,3 @@ export type OutgoingMessage =
       type: MessageType.VALIDATE;
       data: ValidateOutgoingMessage;
     };
-
-export interface Validator {
-  id: string;
-  publicKey: string;
-  ip: string;
-  country: string;
-  city: string;
-  latitude: number;
-  longitude: number;
-  pendingPayouts: number;
-  ticks: WebsiteTick[];
-}
-
-export interface WebsiteTick {
-  id: string;
-  websiteId: string;
-  validatorId: string;
-  createdAt: Date;
-  status: WebsiteStatus;
-  latency: number;
-}
-
-export enum WebsiteStatus {
-  GOOD = 'good',
-  BAD = 'bad',
-}

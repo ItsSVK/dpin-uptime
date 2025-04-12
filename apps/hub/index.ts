@@ -1,20 +1,12 @@
 import { randomUUIDv7, type ServerWebSocket } from 'bun';
-import type {
-  IncomingMessage,
-  SignupIncomingMessage,
-  Validator,
-  WebsiteTick,
-} from 'common/types';
-import { MessageType, WebsiteStatus } from 'common/types';
+import type { IncomingMessage, SignupIncomingMessage } from 'common/types';
+import { MessageType } from 'common/types';
 import { prismaClient } from 'db/client';
 import { PublicKey } from '@solana/web3.js';
 import nacl from 'tweetnacl';
 import nacl_util from 'tweetnacl-util';
-import type {
-  Validator as PrismaValidator,
-  WebsiteStatus as PrismaWebsiteStatusType,
-} from '@prisma/client';
-import { WebsiteStatus as PrismaWebsiteStatus } from '@prisma/client';
+import type { Validator } from '@prisma/client';
+import { WebsiteStatus } from '@prisma/client';
 
 const availableValidators: {
   validatorId: string;
@@ -24,31 +16,6 @@ const availableValidators: {
 
 const CALLBACKS: { [callbackId: string]: (data: IncomingMessage) => void } = {};
 const COST_PER_VALIDATION = 100; // in lamports
-
-const mapToPrismaStatus = (status: WebsiteStatus): PrismaWebsiteStatus => {
-  return status === WebsiteStatus.GOOD
-    ? PrismaWebsiteStatus.GOOD
-    : PrismaWebsiteStatus.BAD;
-};
-
-const mapFromPrismaStatus = (status: PrismaWebsiteStatus): WebsiteStatus => {
-  return status === PrismaWebsiteStatus.GOOD
-    ? WebsiteStatus.GOOD
-    : WebsiteStatus.BAD;
-};
-
-const mapToValidator = (
-  prismaValidator: (PrismaValidator & { ticks: any[] }) | null
-): Validator | null => {
-  if (!prismaValidator) return null;
-  return {
-    ...prismaValidator,
-    ticks: prismaValidator.ticks.map(tick => ({
-      ...tick,
-      status: mapFromPrismaStatus(tick.status),
-    })) as WebsiteTick[],
-  };
-};
 
 Bun.serve({
   fetch(req, server) {
@@ -101,34 +68,30 @@ async function signupHandler(
 ) {
   let validatorDb: Validator | null = null;
 
-  validatorDb = mapToValidator(
-    await prismaClient.validator.findFirst({
-      where: {
+  validatorDb = await prismaClient.validator.findFirst({
+    where: {
+      publicKey,
+    },
+    include: {
+      ticks: true,
+    },
+  });
+
+  if (!validatorDb) {
+    validatorDb = await prismaClient.validator.create({
+      data: {
+        ip,
         publicKey,
+        country,
+        city,
+        latitude,
+        longitude,
+        ticks: { create: [] },
       },
       include: {
         ticks: true,
       },
-    })
-  );
-
-  if (!validatorDb) {
-    validatorDb = mapToValidator(
-      await prismaClient.validator.create({
-        data: {
-          ip,
-          publicKey,
-          country,
-          city,
-          latitude,
-          longitude,
-          ticks: { create: [] },
-        },
-        include: {
-          ticks: true,
-        },
-      })
-    );
+    });
   }
 
   if (validatorDb) {
@@ -207,6 +170,9 @@ setInterval(async () => {
             return;
           }
 
+          console.log('validatorId, statusCode, latency');
+          console.log(validatorId, statusCode, latency);
+
           await prismaClient.$transaction(async tx => {
             await tx.websiteTick.create({
               data: {
@@ -214,8 +180,8 @@ setInterval(async () => {
                 validatorId,
                 status:
                   statusCode >= 200 && statusCode < 400
-                    ? PrismaWebsiteStatus.GOOD
-                    : PrismaWebsiteStatus.BAD,
+                    ? WebsiteStatus.GOOD
+                    : WebsiteStatus.BAD,
                 latency,
                 createdAt: new Date(),
               },
