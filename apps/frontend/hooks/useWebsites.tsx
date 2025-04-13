@@ -1,7 +1,5 @@
 'use client';
-import { API_BACKEND_URL } from '@/config';
 import { useAuth } from '@clerk/nextjs';
-import axios from 'axios';
 import { useEffect, useState } from 'react';
 import type { Website, WebsiteTick } from '@prisma/client';
 
@@ -12,14 +10,18 @@ export function useWebsites() {
   >([]);
 
   async function refreshWebsites() {
-    const token = await getToken();
-    const response = await axios.get(`${API_BACKEND_URL}/api/v1/websites`, {
-      headers: {
-        Authorization: token,
-      },
-    });
-
-    setWebsites(response.data.websites);
+    try {
+      const token = await getToken();
+      const response = await fetch('/api/websites', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setWebsites(data.websites);
+    } catch (error) {
+      console.error('Failed to fetch websites:', error);
+    }
   }
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export function useWebsites() {
       () => {
         refreshWebsites();
       },
-      1000 * 60 * 1
+      1000 * 60 * 1 // Refresh every minute
     );
 
     return () => clearInterval(interval);

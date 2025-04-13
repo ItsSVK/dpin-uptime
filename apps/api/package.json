@@ -9,7 +9,7 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "dev": "bun run index.ts --turbopack"
+    "start": "bun run index.ts --turbopack"
   },
   "dependencies": {
     "@solana/web3.js": "^1.98.0",

@@ -8,8 +8,6 @@ import { WebsiteCard } from '@/components/website/WebsiteCard';
 import { CreateWebsiteModal } from '@/components/modals/CreateWebsiteModal';
 import { processWebsiteData } from '@/lib/websiteUtils';
 import { useAuth } from '@clerk/nextjs';
-import axios from 'axios';
-import { API_BACKEND_URL } from '@/config';
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,15 +28,14 @@ export default function DashboardPage() {
 
     try {
       const token = await getToken();
-      await axios.post(
-        `${API_BACKEND_URL}/api/v1/website`,
-        { url },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await fetch('/api/websites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ url }),
+      });
       refreshWebsites();
     } catch (error) {
       console.error('Failed to add website:', error);
