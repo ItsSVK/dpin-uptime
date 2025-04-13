@@ -1,18 +1,11 @@
-import { WebsiteStatus } from '@prisma/client';
+import { Website, WebsiteStatus, WebsiteTick } from '@prisma/client';
 import type { ProcessedWebsite } from '@/types/website';
 
-interface RawWebsite {
-  id: string;
-  url: string;
-  ticks: {
-    id: string;
-    websiteId: string;
-    status: WebsiteStatus;
-    createdAt: Date;
-  }[];
-}
-
-export function processWebsiteData(website: RawWebsite): ProcessedWebsite {
+export function processWebsiteData(
+  website: Website & {
+    ticks: WebsiteTick[];
+  }
+): ProcessedWebsite {
   // Sort ticks by creation time
   const sortedTicks = [...website.ticks].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -65,9 +58,11 @@ export function processWebsiteData(website: RawWebsite): ProcessedWebsite {
     : 'Never';
 
   return {
-    id: website.id,
-    url: website.url,
+    ...website,
+    ticks: sortedTicks,
     status: currentStatus,
+    responseTime: sortedTicks[0]?.total ?? 0,
+    uptime: uptimePercentage,
     uptimePercentage,
     lastChecked,
     uptimeTicks: windows,

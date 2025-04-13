@@ -1,23 +1,18 @@
-import { WebsiteStatus } from '@prisma/client';
+import {
+  Website as PrismaWebsite,
+  WebsiteTick as PrismaWebsiteTick,
+  WebsiteStatus,
+} from '@prisma/client';
 
-export interface ProcessedWebsite {
-  id: string;
-  url: string;
+export type Website = PrismaWebsite;
+export type WebsiteTick = PrismaWebsiteTick;
+
+export interface ProcessedWebsite extends Website {
+  ticks: WebsiteTick[];
   status: WebsiteStatus;
-  uptimePercentage: number;
+  responseTime: number;
+  uptime: number;
   lastChecked: string;
   uptimeTicks: WebsiteStatus[];
-}
-
-export interface WebsiteTick {
-  id: string;
-  websiteId: string;
-  status: WebsiteStatus;
-  createdAt: string;
-}
-
-export interface Website {
-  id: string;
-  url: string;
-  ticks: WebsiteTick[];
+  uptimePercentage: number;
 }
