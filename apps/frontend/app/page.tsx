@@ -1,6 +1,6 @@
-"use client"
+'use client';
 import React, { useEffect, useState } from 'react';
-import { Activity, Bell, Clock, Server, ArrowRight, Check, Moon, Sun } from 'lucide-react';
+import { Activity, Bell, Clock, Server, ArrowRight, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 function App() {
@@ -25,10 +25,14 @@ function App() {
               Monitor Your Services with Confidence
             </h1>
             <p className="mt-6 text-xl text-gray-600 dark:text-gray-300">
-              Get instant alerts when your services go down. Monitor uptime, performance, and ensure your business never misses a beat.
+              Get instant alerts when your services go down. Monitor uptime,
+              performance, and ensure your business never misses a beat.
             </p>
             <div className="mt-8 flex space-x-4">
-              <button onClick={() => router.push('/dashboard')} className="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition flex items-center">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition flex items-center"
+              >
                 Start Monitoring
                 <ArrowRight className="ml-2 h-5 w-5" />
               </button>
@@ -55,17 +59,23 @@ function App() {
           </h2>
           <div className="grid md:grid-cols-3 gap-12">
             <FeatureCard
-              icon={<Bell className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />}
+              icon={
+                <Bell className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+              }
               title="Instant Alerts"
               description="Get notified immediately when your services experience downtime through multiple channels."
             />
             <FeatureCard
-              icon={<Clock className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />}
+              icon={
+                <Clock className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+              }
               title="24/7 Monitoring"
               description="Round-the-clock monitoring from multiple locations worldwide."
             />
             <FeatureCard
-              icon={<Server className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />}
+              icon={
+                <Server className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+              }
               title="Detailed Reports"
               description="Comprehensive reports and analytics to track your service performance."
             />
@@ -84,11 +94,11 @@ function App() {
               title="Starter"
               price="29"
               features={[
-                "10 monitors",
-                "1-minute checks",
-                "Email notifications",
-                "5 team members",
-                "24h data retention"
+                '10 monitors',
+                '1-minute checks',
+                'Email notifications',
+                '5 team members',
+                '24h data retention',
               ]}
             />
             <PricingCard
@@ -96,24 +106,24 @@ function App() {
               price="79"
               featured={true}
               features={[
-                "50 monitors",
-                "30-second checks",
-                "All notification channels",
-                "Unlimited team members",
-                "30-day data retention",
-                "API access"
+                '50 monitors',
+                '30-second checks',
+                'All notification channels',
+                'Unlimited team members',
+                '30-day data retention',
+                'API access',
               ]}
             />
             <PricingCard
               title="Enterprise"
               price="199"
               features={[
-                "Unlimited monitors",
-                "15-second checks",
-                "Priority support",
-                "Custom solutions",
-                "90-day data retention",
-                "SLA guarantee"
+                'Unlimited monitors',
+                '15-second checks',
+                'Priority support',
+                'Custom solutions',
+                '90-day data retention',
+                'SLA guarantee',
               ]}
             />
           </div>
@@ -136,25 +146,61 @@ function App() {
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Features</a></li>
-                <li><a href="#" className="hover:text-white">Pricing</a></li>
-                <li><a href="#" className="hover:text-white">API</a></li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    API
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">About</a></li>
-                <li><a href="#" className="hover:text-white">Blog</a></li>
-                <li><a href="#" className="hover:text-white">Careers</a></li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Blog
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Careers
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Privacy</a></li>
-                <li><a href="#" className="hover:text-white">Terms</a></li>
-                <li><a href="#" className="hover:text-white">Security</a></li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Privacy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Terms
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Security
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
@@ -167,23 +213,45 @@ function App() {
   );
 }
 
-function FeatureCard({ icon, title, description }) {
+function FeatureCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
   return (
     <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
       <div className="mb-4">{icon}</div>
-      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        {title}
+      </h3>
       <p className="text-gray-600 dark:text-gray-300">{description}</p>
     </div>
   );
 }
 
-function PricingCard({ title, price, features, featured = false }) {
+function PricingCard({
+  title,
+  price,
+  features,
+  featured = false,
+}: {
+  title: string;
+  price: string;
+  features: string[];
+  featured?: boolean;
+}) {
   return (
-    <div className={`p-8 rounded-lg ${
-      featured
-        ? 'bg-indigo-600 text-white ring-4 ring-indigo-300 dark:ring-indigo-500'
-        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white'
-    }`}>
+    <div
+      className={`p-8 rounded-lg ${
+        featured
+          ? 'bg-indigo-600 text-white ring-4 ring-indigo-300 dark:ring-indigo-500'
+          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white'
+      }`}
+    >
       <h3 className="text-xl font-semibold mb-4">{title}</h3>
       <div className="mb-6">
         <span className="text-4xl font-bold">${price}</span>

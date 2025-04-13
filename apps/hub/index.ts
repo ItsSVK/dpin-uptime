@@ -160,7 +160,18 @@ setInterval(async () => {
 
       CALLBACKS[callbackId] = async (data: IncomingMessage) => {
         if (data.type === MessageType.VALIDATE) {
-          const { validatorId, statusCode, latency, signedMessage } = data.data;
+          const {
+            validatorId,
+            statusCode,
+            nameLookup,
+            connection,
+            tlsHandshake,
+            dataTransfer,
+            ttfb,
+            total,
+            error,
+            signedMessage,
+          } = data.data;
           const verified = await verifyMessage(
             `Replying to ${callbackId}`,
             validator.publicKey,
@@ -170,8 +181,20 @@ setInterval(async () => {
             return;
           }
 
-          console.log('validatorId, statusCode, latency');
-          console.log(validatorId, statusCode, latency);
+          console.log(
+            'validatorId, statusCode, nameLookup, connection, tlsHandshake, dataTransfer, ttfb, total, error'
+          );
+          console.log(
+            validatorId,
+            statusCode,
+            nameLookup,
+            connection,
+            tlsHandshake,
+            dataTransfer,
+            ttfb,
+            total,
+            error
+          );
 
           await prismaClient.$transaction(async tx => {
             await tx.websiteTick.create({
@@ -182,7 +205,13 @@ setInterval(async () => {
                   statusCode >= 200 && statusCode < 400
                     ? WebsiteStatus.GOOD
                     : WebsiteStatus.BAD,
-                latency,
+                nameLookup,
+                connection,
+                tlsHandshake,
+                dataTransfer,
+                ttfb,
+                total,
+                error,
                 createdAt: new Date(),
               },
             });
@@ -198,4 +227,4 @@ setInterval(async () => {
       };
     });
   }
-}, 60 * 1000);
+}, 5 * 1000);

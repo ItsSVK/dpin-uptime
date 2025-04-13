@@ -9,7 +9,8 @@ import { Keypair } from '@solana/web3.js';
 import nacl from 'tweetnacl';
 import nacl_util from 'tweetnacl-util';
 import bs58 from 'bs58';
-
+import got from 'got';
+import type { WebsiteTick } from '@prisma/client';
 const CALLBACKS: {
   [callbackId: string]: (data: SignupOutgoingMessage) => void;
 } = {};
@@ -77,35 +78,109 @@ async function main() {
   }, 10000);
 }
 
+async function checkURL(url: string): Promise<
+  Omit<
+    WebsiteTick,
+    'status' | 'websiteId' | 'validatorId' | 'createdAt' | 'id'
+  > & {
+    statusCode: number;
+  }
+> {
+  try {
+    const response = await got(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      throwHttpErrors: false,
+      timeout: {
+        lookup: 5000, // DNS lookup timeout
+        connect: 5000, // TCP connection timeout
+        secureConnect: 5000, // TLS handshake timeout
+        socket: 5000, // Socket inactivity timeout
+        send: 5000, // Send timeout
+        response: 10000, // Response timeout
+      },
+      retry: {
+        limit: 0,
+      },
+    });
+
+    const t = response.timings;
+
+    const result = {
+      statusCode: Number(response.statusCode),
+      nameLookup: Number(((t.lookup as GLfloat) - t.start).toFixed(2)),
+      connection: Number(
+        ((t.connect as GLfloat) - (t.lookup as GLfloat)).toFixed(2)
+      ),
+      tlsHandshake: t.secureConnect
+        ? Number(
+            ((t.secureConnect as GLfloat) - (t.connect as GLfloat)).toFixed(2)
+          )
+        : 0,
+      ttfb: Number(((t.response as GLfloat) - t.start).toFixed(2)),
+      dataTransfer: Number(
+        ((t.end as GLfloat) - (t.response as GLfloat)).toFixed(2)
+      ),
+      total: Number(((t.end as GLfloat) - t.start).toFixed(2)),
+      error: '',
+    };
+
+    console.log(`[OK] ${url}`);
+    console.table(result);
+
+    return result;
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] ${url}: ${errorMessage}`);
+    console.error(err);
+    return {
+      error: errorMessage,
+      statusCode: 500,
+      nameLookup: 0,
+      connection: 0,
+      tlsHandshake: 0,
+      ttfb: 0,
+      dataTransfer: 0,
+      total: 0,
+    };
+  }
+}
+
 async function validateHandler(
   ws: WebSocket,
   { url, callbackId, websiteId }: ValidateOutgoingMessage,
   keypair: Keypair
 ) {
   console.log(`Validating ${url}`);
-  const startTime = Date.now();
   const signedMessage = await signMessage(`Replying to ${callbackId}`, keypair);
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-    });
-    const endTime = Date.now();
-    const latency = endTime - startTime;
-    const statusCode = response.status;
+    const {
+      statusCode,
+      nameLookup,
+      connection,
+      tlsHandshake,
+      ttfb,
+      dataTransfer,
+      total,
+      error,
+    } = await checkURL(url);
 
-    console.log(url);
-    console.log(statusCode);
     ws.send(
       JSON.stringify({
         type: MessageType.VALIDATE,
         data: {
           callbackId,
           statusCode,
-          latency,
+          nameLookup,
+          connection,
+          tlsHandshake,
+          ttfb,
+          dataTransfer,
+          total,
+          error,
           websiteId,
           validatorId,
           signedMessage,
@@ -119,7 +194,13 @@ async function validateHandler(
         data: {
           callbackId,
           statusCode: 500,
-          latency: 1000,
+          nameLookup: 0,
+          connection: 0,
+          tlsHandshake: 0,
+          ttfb: 0,
+          dataTransfer: 0,
+          total: 0,
+          error: 'N/A',
           websiteId,
           validatorId,
           signedMessage,

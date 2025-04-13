@@ -39,14 +39,20 @@ model Validator {
 }
 
 model WebsiteTick {
-  id          String        @id @default(uuid())
-  websiteId   String
-  validatorId String
-  createdAt   DateTime
-  status      WebsiteStatus
-  latency     Float
-  website     Website       @relation(fields: [websiteId], references: [id])
-  validator   Validator     @relation(fields: [validatorId], references: [id])
+  id           String        @id @default(uuid())
+  websiteId    String
+  validatorId  String
+  createdAt    DateTime
+  status       WebsiteStatus
+  nameLookup   Float
+  connection   Float
+  tlsHandshake Float
+  dataTransfer Float
+  ttfb         Float
+  total        Float
+  error        String
+  website      Website       @relation(fields: [websiteId], references: [id])
+  validator    Validator     @relation(fields: [validatorId], references: [id])
 }
 
 enum WebsiteStatus {

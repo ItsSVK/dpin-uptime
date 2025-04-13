@@ -13,7 +13,13 @@ export interface ValidateIncomingMessage {
   callbackId: string;
   signedMessage: string;
   statusCode: number;
-  latency: number;
+  nameLookup: number;
+  connection: number;
+  tlsHandshake: number;
+  dataTransfer: number;
+  ttfb: number;
+  total: number;
+  error: string;
   websiteId: string;
   validatorId: string;
 }
