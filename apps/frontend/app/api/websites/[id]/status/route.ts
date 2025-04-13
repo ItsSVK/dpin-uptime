@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   return withAuth(req, async userId => {
-    const websiteId = params.id;
+    const websiteId = (await params).id;
 
     const data = await prismaClient.website.findFirst({
       where: {
