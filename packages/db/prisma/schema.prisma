@@ -27,6 +27,7 @@ model Website {
   upSince        DateTime?
   lastCheckedAt  DateTime?
   checkFrequency Int           @default(3)
+  isPaused       Boolean       @default(false)
 }
 
 model Validator {

@@ -35,6 +35,7 @@ interface WebsiteChartProps {
 }
 
 export function WebsiteChart({ data }: WebsiteChartProps) {
+  // get last 20 ticks
   data = data.slice(-20);
 
   return (
@@ -61,7 +62,12 @@ export function WebsiteChart({ data }: WebsiteChartProps) {
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={value => value.toLocaleDateString()}
+              tickFormatter={value =>
+                new Date(value).toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: 'numeric',
+                })
+              }
             />
             <YAxis
               dataKey="total"

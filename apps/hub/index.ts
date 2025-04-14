@@ -157,6 +157,15 @@ setInterval(async () => {
   console.log(`Sending validate to ${websiteByFrequency.length} validators`);
 
   for (const website of websiteByFrequency) {
+    if (website.isPaused) {
+      await pusherServer.trigger(
+        'UPDATED_WEBSITE',
+        'website-updated',
+        website.id
+      );
+      continue;
+    }
+
     availableValidators.forEach(validator => {
       const callbackId = randomUUIDv7();
       console.log(

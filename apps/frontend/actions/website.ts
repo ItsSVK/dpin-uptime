@@ -21,7 +21,11 @@ export async function getWebsite(
       disabled: false,
     },
     include: {
-      ticks: true,
+      ticks: {
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
     },
   });
 
@@ -69,4 +73,26 @@ export async function createWebsite(url: string): Promise<Website> {
   });
 
   return data as unknown as Website;
+}
+
+export async function updateWebsite(id: string, data: Partial<Website>) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error('Unauthorized');
+  }
+
+  // update the website also return the updated website with the ticks
+  const updatedData = await prismaClient.website.update({
+    where: {
+      id,
+      userId,
+    },
+    data,
+    include: {
+      ticks: true,
+    },
+  });
+
+  return updatedData as unknown as Website & { ticks: WebsiteTick[] };
 }
