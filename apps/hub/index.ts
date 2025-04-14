@@ -7,7 +7,7 @@ import nacl from 'tweetnacl';
 import nacl_util from 'tweetnacl-util';
 import type { Validator } from '@prisma/client';
 import { WebsiteStatus } from '@prisma/client';
-
+import { pusherServer } from '@dpin/pusher';
 const availableValidators: {
   validatorId: string;
   socket: ServerWebSocket<unknown>;
@@ -114,6 +114,13 @@ async function signupHandler(
   }
 }
 
+async function addMinutes(date: Date | null, minutes: number) {
+  if (!date) {
+    return new Date();
+  }
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
 async function verifyMessage(
   message: string,
   publicKey: string,
@@ -140,9 +147,16 @@ setInterval(async () => {
     return;
   }
 
-  console.log(`Sending validate to ${availableValidators.length} validators`);
+  const websiteByFrequency = websitesToMonitor.filter(
+    async website =>
+      (
+        await addMinutes(website.lastCheckedAt, website.checkFrequency)
+      ).getTime() < Date.now()
+  );
 
-  for (const website of websitesToMonitor) {
+  console.log(`Sending validate to ${websiteByFrequency.length} validators`);
+
+  for (const website of websiteByFrequency) {
     availableValidators.forEach(validator => {
       const callbackId = randomUUIDv7();
       console.log(
@@ -196,15 +210,43 @@ setInterval(async () => {
             error
           );
 
+          const status =
+            statusCode >= 200 && statusCode < 400
+              ? WebsiteStatus.GOOD
+              : WebsiteStatus.BAD;
+
           await prismaClient.$transaction(async tx => {
+            if (website.upSince === null && status === WebsiteStatus.GOOD) {
+              await tx.website.update({
+                where: { id: website.id },
+                data: {
+                  upSince: new Date(),
+                },
+              });
+            } else if (
+              website.upSince !== null &&
+              status === WebsiteStatus.BAD
+            ) {
+              await tx.website.update({
+                where: { id: website.id },
+                data: {
+                  upSince: null,
+                },
+              });
+            }
+
+            await tx.website.update({
+              where: { id: website.id },
+              data: {
+                lastCheckedAt: new Date(),
+              },
+            });
+
             await tx.websiteTick.create({
               data: {
                 websiteId: website.id,
                 validatorId,
-                status:
-                  statusCode >= 200 && statusCode < 400
-                    ? WebsiteStatus.GOOD
-                    : WebsiteStatus.BAD,
+                status,
                 nameLookup,
                 connection,
                 tlsHandshake,
@@ -223,6 +265,22 @@ setInterval(async () => {
               },
             });
           });
+
+          const updatedWebsite = await prismaClient.website.findUnique({
+            where: { id: website.id },
+            include: {
+              ticks: true,
+            },
+          });
+
+          if (updatedWebsite) {
+            console.log('triggering website-updated', updatedWebsite.id);
+            await pusherServer.trigger(
+              'UPDATED_WEBSITE',
+              'website-updated',
+              updatedWebsite.id
+            );
+          }
         }
       };
     });

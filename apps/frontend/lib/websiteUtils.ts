@@ -68,3 +68,20 @@ export function processWebsiteData(
     uptimeTicks: windows,
   };
 }
+
+export function timeSince(dateInput: string | Date): string {
+  const now = new Date();
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  let hours = Math.floor(seconds / 3600);
+  let minutes = Math.floor((seconds % 3600) / 60);
+  let remainingSeconds = seconds % 60;
+
+  let parts = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  parts.push(`${remainingSeconds}s`);
+
+  return parts.join(' ');
+}

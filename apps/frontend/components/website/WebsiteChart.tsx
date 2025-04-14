@@ -1,7 +1,7 @@
 'use client';
 
 import { TrendingUp } from 'lucide-react';
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 import {
   Card,
@@ -17,71 +17,83 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-const chartData = [
-  { month: 'January', desktop: 186, mobile: 80 },
-  { month: 'February', desktop: 305, mobile: 200 },
-  { month: 'March', desktop: 237, mobile: 120 },
-  { month: 'April', desktop: 73, mobile: 190 },
-  { month: 'May', desktop: 209, mobile: 130 },
-  { month: 'June', desktop: 214, mobile: 140 },
-];
+import { WebsiteTick } from '@/types/website';
 
 const chartConfig = {
-  desktop: {
-    label: 'Desktop',
+  total: {
+    label: 'Total',
     color: 'hsl(var(--chart-1))',
   },
-  mobile: {
-    label: 'Mobile',
+  dataTransfer: {
+    label: 'Data Transfer',
     color: 'hsl(var(--chart-2))',
   },
 } satisfies ChartConfig;
 
-export function WebsiteChart() {
+interface WebsiteChartProps {
+  data: WebsiteTick[];
+}
+
+export function WebsiteChart({ data }: WebsiteChartProps) {
+  data = data.slice(-20);
+
   return (
-    <Card>
+    <Card className="border-gray-700 rounded-2xl">
       <CardHeader>
-        <CardTitle>Area Chart - Stacked</CardTitle>
+        <CardTitle>Uptime</CardTitle>
         <CardDescription>
-          Showing total visitors for the last 6 months
+          Showing total uptime for the last 6 months
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
           <AreaChart
             accessibilityLayer
-            data={chartData}
+            data={data}
             margin={{
               left: 12,
               right: 12,
             }}
           >
-            <CartesianGrid vertical={false} />
+            {/* <CartesianGrid vertical={false} /> */}
             <XAxis
-              dataKey="month"
+              dataKey="createdAt"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={value => value.slice(0, 3)}
+              tickFormatter={value => value.toLocaleDateString()}
+            />
+            <YAxis
+              dataKey="total"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
             />
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent indicator="dot" />}
+              content={
+                <ChartTooltipContent
+                  indicator="dot"
+                  className="bg-white dark:bg-gray-900"
+                />
+              }
             />
             <Area
-              dataKey="mobile"
+              dataKey="total"
+              label="Total"
               type="natural"
-              fill="var(--color-mobile)"
+              fill="var(--color-dataTransfer)"
               fillOpacity={0.4}
-              stroke="var(--color-mobile)"
-              stackId="a"
+              stroke="var(--color-dataTransfer)"
+              stackId="b"
             />
             <Area
-              dataKey="desktop"
+              dataKey="dataTransfer"
+              label="Data Transfer"
               type="natural"
-              fill="var(--color-desktop)"
+              fill="var(--color-total)"
               fillOpacity={0.4}
-              stroke="var(--color-desktop)"
+              stroke="var(--color-total)"
               stackId="a"
             />
           </AreaChart>

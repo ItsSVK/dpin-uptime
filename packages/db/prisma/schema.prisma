@@ -19,11 +19,14 @@ model User {
 }
 
 model Website {
-  id       String        @id @default(uuid())
-  url      String
-  userId   String
-  ticks    WebsiteTick[]
-  disabled Boolean       @default(false)
+  id             String        @id @default(uuid())
+  url            String
+  userId         String
+  ticks          WebsiteTick[]
+  disabled       Boolean       @default(false)
+  upSince        DateTime?
+  lastCheckedAt  DateTime?
+  checkFrequency Int           @default(3)
 }
 
 model Validator {

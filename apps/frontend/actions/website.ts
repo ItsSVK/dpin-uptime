@@ -3,8 +3,11 @@
 import { Website, WebsiteTick } from '@/types/website';
 import { prismaClient } from 'db/client';
 import { auth } from '@clerk/nextjs/server';
+import { formatUrl } from '@/lib/url';
 
-export async function getWebsite(id: string): Promise<Website> {
+export async function getWebsite(
+  id: string
+): Promise<Website & { ticks: WebsiteTick[] }> {
   const { userId } = await auth();
 
   if (!userId) {
@@ -26,7 +29,7 @@ export async function getWebsite(id: string): Promise<Website> {
     throw new Error('Website not found');
   }
 
-  return data as unknown as Website;
+  return data as unknown as Website & { ticks: WebsiteTick[] };
 }
 
 export async function getWebsites(): Promise<
@@ -60,7 +63,7 @@ export async function createWebsite(url: string): Promise<Website> {
 
   const data = await prismaClient.website.create({
     data: {
-      url,
+      url: formatUrl(url),
       userId,
     },
   });

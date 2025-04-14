@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { StatusCircle } from '@/components/status/StatusCircle';
 import { UptimeTicks } from '@/components/status/UptimeTicks';
 import type { ProcessedWebsite } from '@/types/website';
+import { useRouter } from 'next/navigation';
 
 interface WebsiteCardProps {
   website: ProcessedWebsite;
@@ -10,7 +11,7 @@ interface WebsiteCardProps {
 
 export function WebsiteCard({ website }: WebsiteCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-
+  const router = useRouter();
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
       <div
@@ -20,7 +21,10 @@ export function WebsiteCard({ website }: WebsiteCardProps) {
         <div className="flex items-center space-x-4">
           <StatusCircle status={website.status} />
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">
+            <h3
+              className="font-semibold text-gray-900 dark:text-white"
+              onClick={() => router.push(`/dashboard/${website.id}`)}
+            >
               {website.url}
             </h3>
           </div>
