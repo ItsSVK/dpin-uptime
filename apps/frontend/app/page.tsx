@@ -1,19 +1,11 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Activity, Bell, Clock, Server, ArrowRight, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 function App() {
-  const [darkMode, setDarkMode] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 dark:text-white transition-colors duration-200">
@@ -42,10 +34,12 @@ function App() {
             </div>
           </div>
           <div className="relative">
-            <img
+            <Image
               src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80"
               alt="Dashboard"
               className="rounded-lg shadow-2xl"
+              width={800}
+              height={800}
             />
           </div>
         </div>

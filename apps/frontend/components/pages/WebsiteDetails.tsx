@@ -30,7 +30,12 @@ function WebsiteDetails({ id, initialWebsite }: WebsiteDetailsProps) {
         getWebsite(id).then(setWebsite);
       }
     });
-  }, []);
+
+    return () => {
+      pusherClient.unsubscribe('UPDATED_WEBSITE');
+      pusherClient.unbind('website-updated');
+    };
+  }, [id]);
 
   const [uptime, setUptime] = useState<string>('N/A');
   const [lastCheckedAt, setLastCheckedAt] = useState<string>('N/A');

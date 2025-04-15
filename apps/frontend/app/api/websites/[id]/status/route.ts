@@ -4,14 +4,14 @@ import { prismaClient } from 'db/client';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withAuth(req, async userId => {
-    const websiteId = (await params).id;
+    const { id } = await params;
 
     const data = await prismaClient.website.findFirst({
       where: {
-        id: websiteId,
+        id,
         userId,
         disabled: false,
       },
