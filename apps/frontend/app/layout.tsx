@@ -4,6 +4,7 @@ import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Appbar } from '../components/Appbar';
 import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from '@/components/ui/sonner';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,7 +30,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
         >
           <ThemeProvider
             attribute="class"
@@ -38,8 +39,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <Appbar />
-            {children}
+            <div className="flex flex-1 flex-col">{children}</div>
           </ThemeProvider>
+          <Toaster position="top-right" richColors />
         </body>
       </html>
     </ClerkProvider>

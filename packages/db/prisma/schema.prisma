@@ -31,15 +31,17 @@ model Website {
 }
 
 model Validator {
-  id             String        @id @default(uuid())
-  publicKey      String
-  country        String
-  city           String
-  latitude       Float
-  longitude      Float
-  ip             String
-  pendingPayouts Int           @default(0)
-  ticks          WebsiteTick[]
+  id               String        @id @default(uuid())
+  publicKey        String
+  country          String
+  city             String
+  latitude         Float
+  longitude        Float
+  ip               String
+  pendingPayouts   Int           @default(0)
+  processingPayout Boolean       @default(false)
+  ticks            WebsiteTick[]
+  transactions     Transaction[]
 }
 
 model WebsiteTick {
@@ -59,8 +61,27 @@ model WebsiteTick {
   validator    Validator     @relation(fields: [validatorId], references: [id])
 }
 
+model Transaction {
+  id              String            @id @default(uuid())
+  signature       String
+  status          TransactionStatus @default(Pending)
+  retryCount      Int               @default(0)
+  instructionData Json
+  validatorId     String
+  validator       Validator         @relation(fields: [validatorId], references: [id])
+  amount          BigInt
+  lastCheckedAt   DateTime?
+  createdAt       DateTime          @default(now())
+}
+
 enum WebsiteStatus {
   GOOD
   BAD
   UNKNOWN
+}
+
+enum TransactionStatus {
+  Pending
+  Success
+  Failure
 }
