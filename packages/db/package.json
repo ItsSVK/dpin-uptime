@@ -3,6 +3,11 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "generate": "bunx prisma generate",
+    "migrate": "bunx prisma migrate dev",
+    "studio": "bunx prisma studio"
+  },
   "exports": {
     "./client": "./src/index.ts"
   },
@@ -15,5 +20,8 @@
   "dependencies": {
     "@prisma/client": "^6.5.0",
     "prisma": "^6.5.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
