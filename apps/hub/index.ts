@@ -36,7 +36,19 @@ Bun.serve({
           data.data.signedMessage
         );
         if (verified) {
-          await signupHandler(ws, data.data);
+          const geoData = await getGeoData(ws.remoteAddress || '0.0.0.0');
+
+          const signUpData: SignupIncomingMessage = {
+            ...data.data,
+            ip: geoData.ip,
+            country: geoData.country,
+            city: geoData.city,
+            region: geoData.region,
+            latitude: geoData.latitude,
+            longitude: geoData.longitude,
+          };
+
+          await signupHandler(ws, signUpData);
         }
       } else if (data.type === MessageType.VALIDATE) {
         CALLBACKS[data.data.callbackId](data);
@@ -57,13 +69,14 @@ Bun.serve({
 async function signupHandler(
   ws: ServerWebSocket<unknown>,
   {
-    ip,
     publicKey,
     callbackId,
+    ip,
     country,
     city,
     latitude,
     longitude,
+    region,
   }: SignupIncomingMessage
 ) {
   let validatorDb: Validator | null = null;
@@ -86,6 +99,7 @@ async function signupHandler(
         city,
         latitude,
         longitude,
+        region,
         ticks: { create: [] },
       },
       include: {
@@ -134,6 +148,62 @@ async function verifyMessage(
   );
 
   return result;
+}
+
+async function getGeoData(ip: string) {
+  // Try primary provider (ipapi.co)
+  try {
+    const response = await fetch(`https://ipapi.co/${ip}/json/`);
+    const data = await response.json();
+
+    if (!data.error) {
+      return {
+        country: data.country_name,
+        city: data.city,
+        region: data.region,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        ip: ip,
+      };
+    }
+    throw new Error('Failed to get location data from primary provider', data);
+  } catch (primaryError) {
+    console.error('Error with primary geo provider:', primaryError);
+
+    // Try secondary provider (geojs.io - free, no key required, HTTPS)
+    try {
+      const response = await fetch(`https://get.geojs.io/v1/ip/geo/${ip}.json`);
+      const data = await response.json();
+
+      if (data.latitude === 'nil') {
+        throw new Error(
+          'Failed to get location data from secondary provider',
+          data
+        );
+      }
+
+      return {
+        country: data.country,
+        city: data.city,
+        region: data.region,
+        latitude: parseFloat(data.latitude),
+        longitude: parseFloat(data.longitude),
+        ip: ip,
+      };
+    } catch (secondaryError) {
+      console.error('Error with secondary geo provider:', secondaryError);
+
+      // Return default values if both providers fail
+      return {
+        country: 'Unknown',
+        city: 'Unknown',
+        region: 'Unknown',
+        latitude: 0,
+        longitude: 0,
+        ip: ip,
+      };
+    }
+  }
 }
 
 setInterval(async () => {
@@ -204,10 +274,11 @@ setInterval(async () => {
             return;
           }
 
+          console.log('Validation Results:');
           console.log(
             'validatorId, statusCode, nameLookup, connection, tlsHandshake, dataTransfer, ttfb, total, error'
           );
-          console.log(
+          console.table({
             validatorId,
             statusCode,
             nameLookup,
@@ -216,8 +287,8 @@ setInterval(async () => {
             dataTransfer,
             ttfb,
             total,
-            error
-          );
+            error,
+          });
 
           const status =
             statusCode >= 200 && statusCode < 400

@@ -39,11 +39,6 @@ async function main() {
         type: MessageType.SIGNUP,
         data: {
           callbackId,
-          ip: '127.0.0.1',
-          country: 'US',
-          city: 'New York',
-          latitude: 40.7128,
-          longitude: -74.006,
           publicKey: keypair.publicKey,
           signedMessage,
         },

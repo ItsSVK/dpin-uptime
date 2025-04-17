@@ -1,12 +1,13 @@
 export interface SignupIncomingMessage {
-  ip: string;
   publicKey: string;
   signedMessage: string;
   callbackId: string;
+  ip: string;
   country: string;
   city: string;
   latitude: number;
   longitude: number;
+  region: string;
 }
 
 export interface ValidateIncomingMessage {

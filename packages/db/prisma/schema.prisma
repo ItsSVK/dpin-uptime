@@ -38,6 +38,7 @@ model Validator {
   latitude         Float
   longitude        Float
   ip               String
+  region           String
   pendingPayouts   Int           @default(0)
   processingPayout Boolean       @default(false)
   ticks            WebsiteTick[]
