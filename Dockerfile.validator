@@ -1,0 +1,40 @@
+FROM oven/bun:1
+
+WORKDIR /app
+
+# Install required system dependencies
+RUN apt-get update && \
+    apt-get install -y curl netcat-traditional && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+COPY bun.lock ./
+COPY turbo.json ./
+COPY packages/ ./packages/
+COPY apps/validator/package.json ./apps/validator/package.json
+
+# Install dependencies
+RUN bun install
+
+# Generate Prisma client
+RUN bun db:generate
+
+# Copy application code
+COPY apps/validator/ ./apps/validator/
+
+# Create start script
+RUN echo '#!/bin/sh\n\
+set -e\n\
+\n\
+echo "Waiting for hub service..."\n\
+until nc -z hub 8081; do\n\
+  echo "Hub service is unavailable - sleeping"\n\
+  sleep 2\n\
+done\n\
+\n\
+echo "Starting validator service..."\n\
+cd apps/validator && bun run dev\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+CMD ["/app/start.sh"] 

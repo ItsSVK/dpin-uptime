@@ -72,6 +72,20 @@ Next, you can link your Turborepo to your Remote Cache by running the following 
 npx turbo link
 ```
 
+## Docker
+
+To build the validator container:
+
+```bash
+docker build -t dpin-validator -f docker/validator.Dockerfile .
+```
+
+To run the validator container:
+
+```bash
+docker run -d --name dpin-validator dpin-validator
+```
+
 ## Useful Links
 
 Learn more about the power of Turborepo:

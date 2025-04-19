@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dpin
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dpin_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U user -d dpin']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '5050:80'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - dpin_network
+    depends_on:
+      - postgres
+
+  hub:
+    build:
+      context: .
+      dockerfile: Dockerfile.hub
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=user
+      - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
+      - NODE_ENV=development
+    env_file:
+      - .env
+      - ./apps/hub/.env
+    ports:
+      - '8081:8081'
+    networks:
+      - dpin_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z localhost 8081']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./apps/hub:/app/apps/hub
+      - hub_node_modules:/app/node_modules
+
+  validator:
+    build:
+      context: .
+      dockerfile: Dockerfile.validator
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
+      - HUB_URL=ws://hub:8081
+      - NODE_ENV=development
+    env_file:
+      - .env
+      - ./apps/validator/.env
+    networks:
+      - dpin_network
+    depends_on:
+      hub:
+        condition: service_healthy
+    volumes:
+      - ./apps/validator:/app/apps/validator
+      - validator_node_modules:/app/node_modules
+
+  poller:
+    build:
+      context: .
+      dockerfile: Dockerfile.poller
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
+      - NODE_ENV=development
+    env_file:
+      - .env
+      - ./apps/poller/.env
+    networks:
+      - dpin_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/poller:/app/apps/poller
+      - poller_node_modules:/app/node_modules
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://hub:8081
+      - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
+    env_file:
+      - .env
+      - ./apps/frontend/.env.local
+    ports:
+      - '3000:3000'
+    networks:
+      - dpin_network
+    depends_on:
+      - hub
+    volumes:
+      - ./:/app
+      - frontend_node_modules:/app/node_modules
+      - /app/.next
+      - /app/apps/frontend/.next
+
+networks:
+  dpin_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  hub_node_modules:
+  validator_node_modules:
+  poller_node_modules:
+  frontend_node_modules:

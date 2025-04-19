@@ -1,0 +1,30 @@
+FROM oven/bun:1
+
+WORKDIR /app
+
+# Copy root workspace files
+COPY package.json bun.lock turbo.json ./
+
+# Copy packages directory first (includes all package.json files)
+COPY packages/ ./packages/
+
+# Copy frontend app package.json
+COPY apps/frontend/package.json ./apps/frontend/
+
+# Install dependencies with legacy peer deps to handle Next.js and Clerk compatibility
+RUN bun install --legacy-peer-deps
+
+# Copy frontend application code
+COPY apps/frontend ./apps/frontend
+
+# Generate Prisma client
+RUN bun run db:generate
+
+# Expose Next.js port
+EXPOSE 3000
+
+# Set up volumes for development after initial build
+VOLUME ["/app/apps/frontend", "/app/node_modules"]
+
+# Run the frontend development server
+CMD bun dev --filter=frontend
