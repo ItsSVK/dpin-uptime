@@ -1,48 +1,37 @@
-# Use the official Bun image
-FROM oven/bun:1 as builder
+# Use the official Bun image with alpine for builder
+FROM oven/bun:1-alpine as builder
 
 WORKDIR /app
 
-# Install required system dependencies
-RUN apt-get update && \
-    apt-get install -y curl openssl && \
-    rm -rf /var/lib/apt/lists/*
+# Install only required dependencies for building
+RUN apk add --no-cache openssl
 
-# Copy monorepo configuration files
-COPY package.json ./
-COPY bun.lock ./
-COPY turbo.json ./
-COPY tsconfig.json ./
-
-# Copy packages directory for shared dependencies
+# Copy only necessary files for dependency installation
+COPY package.json bun.lock turbo.json tsconfig.json ./
 COPY packages/ ./packages/
-
-# Copy hub package.json
 COPY apps/poller/package.json ./apps/poller/package.json
 
-# Install dependencies
-RUN bun install
+# Install dependencies and generate Prisma Client
+RUN bun install && \
+    cd packages/db && \
+    bunx prisma generate
 
-# Generate Prisma Client
-RUN cd packages/db && bunx prisma generate
-
-# Copy hub source code
+# Copy poller source code and build
 COPY apps/poller/ ./apps/poller/
+RUN cd apps/poller && \
+    bun run build && \
+    # Clean up dev dependencies after build
+    bun install --production
 
-# Build the application
-RUN cd apps/poller && bun run build
-
-# Production stage
-FROM oven/bun:1-slim
+# Production stage using alpine
+FROM oven/bun:1-alpine
 
 WORKDIR /app
 
-# Install OpenSSL 3.0
-RUN apt-get update && \
-    apt-get install -y openssl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# Install only runtime dependencies
+RUN apk add --no-cache openssl ca-certificates
 
-# Copy built files and dependencies
+# Copy only necessary files from builder
 COPY --from=builder /app/apps/poller/dist ./dist
 COPY --from=builder /app/apps/poller/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
