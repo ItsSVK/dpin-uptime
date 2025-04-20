@@ -44,7 +44,6 @@ services:
       - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
       - NODE_ENV=development
     env_file:
-      - .env
       - ./apps/hub/.env
     ports:
       - '8081:8081'
@@ -71,7 +70,6 @@ services:
       - HUB_URL=ws://hub:8081
       - NODE_ENV=development
     env_file:
-      - .env
       - ./apps/validator/.env
     networks:
       - dpin_network
@@ -90,7 +88,6 @@ services:
       - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
       - NODE_ENV=development
     env_file:
-      - .env
       - ./apps/poller/.env
     networks:
       - dpin_network
@@ -106,20 +103,18 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://hub:8081
       - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
     env_file:
-      - .env
       - ./apps/frontend/.env.local
     ports:
       - '3000:3000'
     networks:
       - dpin_network
     depends_on:
+      - postgres
       - hub
     volumes:
-      - ./:/app
+      - ./apps/frontend:/app/apps/frontend
       - frontend_node_modules:/app/node_modules
       - /app/.next
       - /app/apps/frontend/.next
