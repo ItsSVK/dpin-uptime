@@ -7,7 +7,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 # Copy only necessary files for dependency installation
-COPY package.json bun.lock turbo.json tsconfig.json ./
+COPY package.json bun.lockb turbo.json tsconfig.json ./
 COPY packages/ ./packages/
 COPY apps/validator/package.json ./apps/validator/package.json
 
@@ -26,10 +26,11 @@ RUN cd apps/validator && \
 # Production stage using alpine
 FROM oven/bun:1-alpine
 
-WORKDIR /app
-
-# Install only runtime dependencies
+# Install runtime dependencies
 RUN apk add --no-cache openssl ca-certificates
+
+# Set working directory
+WORKDIR /app
 
 # Copy only necessary files from builder
 COPY --from=builder /app/apps/validator/dist ./dist
@@ -40,24 +41,27 @@ COPY --from=builder /app/packages/db/prisma ./prisma
 # Set environment variables
 ENV NODE_ENV=production
 
-# Create startup script with environment validation
-RUN echo '#!/bin/sh\n\
-\n\
-# Validate PRIVATE_KEY\n\
-if [ -z "$PRIVATE_KEY" ]; then\n\
-    echo "Error: PRIVATE_KEY is not set"\n\
-    exit 1\n\
-fi\n\
-\n\
-# Validate HUB_URL\n\
-if [ -z "$HUB_URL" ]; then\n\
-    echo "Error: HUB_URL is not set"\n\
-    exit 1\n\
-fi\n\
-\n\
-# Start the application\n\
-exec bun ./dist/index.js\n\
-' > /app/start.sh && chmod +x /app/start.sh
+# Create the start script in a verifiable way
+RUN echo '#!/bin/sh' > start.sh && \
+    echo '' >> start.sh && \
+    echo '# Validate PRIVATE_KEY' >> start.sh && \
+    echo 'if [ -z "$PRIVATE_KEY" ]; then' >> start.sh && \
+    echo '    echo "Error: PRIVATE_KEY is not set"' >> start.sh && \
+    echo '    exit 1' >> start.sh && \
+    echo 'fi' >> start.sh && \
+    echo '' >> start.sh && \
+    echo '# Validate HUB_URL' >> start.sh && \
+    echo 'if [ -z "$HUB_URL" ]; then' >> start.sh && \
+    echo '    echo "Error: HUB_URL is not set"' >> start.sh && \
+    echo '    exit 1' >> start.sh && \
+    echo 'fi' >> start.sh && \
+    echo '' >> start.sh && \
+    echo '# Start the application' >> start.sh && \
+    echo 'exec bun ./dist/index.js' >> start.sh && \
+    chmod +x start.sh && \
+    # Verify the script exists and is executable
+    ls -la start.sh && \
+    cat start.sh
 
-# Start the application
-CMD ["/app/start.sh"] 
+# Use full path and verify script exists before starting
+CMD ["/bin/sh", "-c", "ls -la /app/start.sh && /app/start.sh"] 

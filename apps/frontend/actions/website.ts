@@ -2,22 +2,30 @@
 
 import { Website, WebsiteTick } from '@/types/website';
 import { prismaClient } from 'db/client';
-import { auth } from '@clerk/nextjs/server';
 import { formatUrl } from '@/lib/url';
+import { getUserFromJWT } from '@/lib/auth';
+
+interface Response<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
 
 export async function getWebsite(
   id: string
-): Promise<Website & { ticks: WebsiteTick[] }> {
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new Error('Unauthorized');
+): Promise<Response<Website & { ticks: WebsiteTick[] }>> {
+  const user = await getUserFromJWT();
+  if (!user) {
+    return {
+      success: false,
+      message: 'Unauthorized',
+    };
   }
 
   const data = await prismaClient.website.findFirst({
     where: {
       id,
-      userId,
+      userId: user.walletAddress,
       disabled: false,
     },
     include: {
@@ -30,24 +38,32 @@ export async function getWebsite(
   });
 
   if (!data) {
-    throw new Error('Website not found');
+    return {
+      success: false,
+      message: 'Website not found',
+    };
   }
 
-  return data as unknown as Website & { ticks: WebsiteTick[] };
+  return {
+    success: true,
+    data,
+  };
 }
 
 export async function getWebsites(): Promise<
-  (Website & { ticks: WebsiteTick[] })[]
+  Response<(Website & { ticks: WebsiteTick[] })[]>
 > {
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new Error('Unauthorized');
+  const user = await getUserFromJWT();
+  if (!user) {
+    return {
+      success: false,
+      message: 'Unauthorized',
+    };
   }
 
   const data = await prismaClient.website.findMany({
     where: {
-      userId,
+      userId: user.walletAddress,
       disabled: false,
     },
     include: {
@@ -55,38 +71,50 @@ export async function getWebsites(): Promise<
     },
   });
 
-  return data as unknown as (Website & { ticks: WebsiteTick[] })[];
+  return {
+    success: true,
+    data,
+  };
 }
 
-export async function createWebsite(url: string): Promise<Website> {
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new Error('Unauthorized');
+export async function createWebsite(url: string): Promise<Response<Website>> {
+  const user = await getUserFromJWT();
+  if (!user) {
+    return {
+      success: false,
+      message: 'Unauthorized',
+    };
   }
 
   const data = await prismaClient.website.create({
     data: {
       url: formatUrl(url),
-      userId,
+      userId: user.walletAddress,
     },
   });
 
-  return data as unknown as Website;
+  return {
+    success: true,
+    data,
+  };
 }
 
-export async function updateWebsite(id: string, data: Partial<Website>) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new Error('Unauthorized');
+export async function updateWebsite(
+  id: string,
+  data: Partial<Website>
+): Promise<Response<Website & { ticks: WebsiteTick[] }>> {
+  const user = await getUserFromJWT();
+  if (!user) {
+    return {
+      success: false,
+      message: 'Unauthorized',
+    };
   }
 
-  // update the website also return the updated website with the ticks
   const updatedData = await prismaClient.website.update({
     where: {
       id,
-      userId,
+      userId: user.walletAddress,
     },
     data,
     include: {
@@ -94,5 +122,8 @@ export async function updateWebsite(id: string, data: Partial<Website>) {
     },
   });
 
-  return updatedData as unknown as Website & { ticks: WebsiteTick[] };
+  return {
+    success: true,
+    data: updatedData,
+  };
 }

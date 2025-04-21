@@ -13,7 +13,7 @@ import { TransactionStatus } from '@prisma/client';
 
 // Configuration
 const connection = new Connection(
-  clusterApiUrl(process.env.NEXT_PUBLIC_SOLANA_NETWORK as Cluster)
+  clusterApiUrl((process.env.NEXT_PUBLIC_SOLANA_NETWORK as Cluster) || 'devnet')
 );
 const maxRetries = 3;
 const pollingInterval = 5000;
