@@ -49,7 +49,6 @@ interface WebsiteListTableProps {
     uptime: number;
     responseTime: number;
     lastChecked: string;
-    tags: string[];
     monitoringSince: string;
     checkFrequency: string;
   }[];

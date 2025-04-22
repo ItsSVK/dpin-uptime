@@ -20,15 +20,21 @@ model User {
 }
 
 model Website {
-  id             String        @id @default(uuid())
-  url            String
-  userId         String
-  ticks          WebsiteTick[]
-  disabled       Boolean       @default(false)
-  upSince        DateTime?
-  lastCheckedAt  DateTime?
-  checkFrequency Int           @default(3)
-  isPaused       Boolean       @default(false)
+  id               String        @id @default(uuid())
+  name             String // Added name field for display
+  url              String
+  userId           String
+  ticks            WebsiteTick[]
+  disabled         Boolean       @default(false)
+  status           WebsiteStatus @default(UNKNOWN) // Current status
+  upSince          DateTime? // When the site came back online
+  lastCheckedAt    DateTime? // Last monitoring check
+  checkFrequency   Int           @default(60) // Check frequency in seconds
+  isPaused         Boolean       @default(false)
+  monitoringSince  DateTime      @default(now()) // When monitoring started
+  uptimePercentage Float         @default(100) // Rolling uptime percentage
+  averageResponse  Float? // Average response time in ms
+  createdAt        DateTime      @default(now())
 }
 
 model Validator {
@@ -42,6 +48,7 @@ model Validator {
   region           String
   pendingPayouts   Int           @default(0)
   processingPayout Boolean       @default(false)
+  createdAt        DateTime      @default(now())
   ticks            WebsiteTick[]
   transactions     Transaction[]
 }
@@ -50,15 +57,15 @@ model WebsiteTick {
   id           String        @id @default(uuid())
   websiteId    String
   validatorId  String
-  createdAt    DateTime
+  createdAt    DateTime      @default(now())
   status       WebsiteStatus
-  nameLookup   Float
-  connection   Float
-  tlsHandshake Float
-  dataTransfer Float
-  ttfb         Float
-  total        Float
-  error        String
+  nameLookup   Float? // DNS lookup time
+  connection   Float? // Connection time
+  tlsHandshake Float? // TLS handshake time
+  dataTransfer Float? // Data transfer time
+  ttfb         Float? // Time to first byte
+  total        Float? // Total response time in ms
+  error        String? // Error message if any
   website      Website       @relation(fields: [websiteId], references: [id])
   validator    Validator     @relation(fields: [validatorId], references: [id])
 }
@@ -77,9 +84,10 @@ model Transaction {
 }
 
 enum WebsiteStatus {
-  GOOD
-  BAD
-  UNKNOWN
+  ONLINE // Site is up and running normally
+  OFFLINE // Site is down
+  DEGRADED // Site is up but performing poorly
+  UNKNOWN // Status cannot be determined
 }
 
 enum TransactionStatus {
