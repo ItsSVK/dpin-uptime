@@ -18,8 +18,14 @@ export async function signJWT(payload: AuthPayload): Promise<string> {
   });
 }
 
-async function updateCookie(token: string): Promise<void> {
+async function updateCookie(token: string | null): Promise<void> {
   const cookieStore = await cookies();
+
+  if (!token) {
+    cookieStore.delete(COOKIE_NAME);
+    return;
+  }
+
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -27,6 +33,7 @@ async function updateCookie(token: string): Promise<void> {
     path: '/',
     maxAge: COOKIE_MAX_AGE,
   });
+  return;
 }
 
 export async function setAuthCookie(token: string): Promise<void> {
@@ -34,7 +41,7 @@ export async function setAuthCookie(token: string): Promise<void> {
 }
 
 export async function clearAuthCookie(): Promise<void> {
-  await updateCookie('');
+  await updateCookie(null);
 }
 
 export async function getUserFromJWT(): Promise<AuthPayload | null> {

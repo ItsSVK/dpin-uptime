@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import bs58 from 'bs58';
 import { ClientOnly } from './ClientOnly';
+import { Button } from '@/components/ui/button';
 import {
   clearAuthCookie,
   isCookieValid,
@@ -58,6 +59,7 @@ function SignInButtonContent() {
   }, [publicKey]);
 
   const handleSignIn = async () => {
+    console.log('Signing in');
     if (signedIn) {
       router.push('/dashboard');
       return;
@@ -92,20 +94,21 @@ function SignInButtonContent() {
   // If connected but no valid cookies, show sign button
   if (connected && !hasValidCookies) {
     return (
-      <button
+      <Button
         onClick={handleSignIn}
         disabled={signing}
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
+        variant="outline"
+        className="hidden sm:flex"
       >
         {signing
           ? 'Signing...'
           : signedIn
             ? 'Continue to Dashboard'
-            : 'Sign Message to Continue'}
-      </button>
+            : 'Sign Message'}
+      </Button>
     );
   }
 
   // Show wallet button in all other cases
-  return <WalletMultiButton />;
+  return <WalletMultiButton className="wallet-adapter-button-trigger" />;
 }

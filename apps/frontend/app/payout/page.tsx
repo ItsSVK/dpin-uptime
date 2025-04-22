@@ -14,6 +14,7 @@ import {
 import Loader from '@/components/status/Loader';
 import { claimPayout, getPayout } from '@/actions/payout';
 import { toast } from 'sonner';
+import { BackgroundGradient } from '@/components/background-gradient';
 
 function App() {
   const [address, setAddress] = useState('');
@@ -54,13 +55,14 @@ function App() {
 
   return (
     <div className="bg-background flex items-center justify-center p-4 flex-1">
+      <BackgroundGradient />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="max-w-md w-full"
       >
-        <Card className="relative overflow-hidden">
+        <Card className="relative overflow-hidden border-gray-800">
           <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-blue-500/10 animate-shimmer pointer-events-none" />
           <CardHeader className="space-y-4 text-center">
             <motion.div
@@ -91,7 +93,7 @@ function App() {
                   setAmount(null);
                 }}
                 placeholder="Enter your Solana address"
-                className="border-input focus:border-primary"
+                className="border-gray-300 focus:border-gray-400 focus:ring-0 focus:ring-offset-0"
               />
             </div>
 
@@ -103,7 +105,7 @@ function App() {
                 <Button
                   onClick={handleGetPayout}
                   disabled={!address || loading}
-                  className="w-full h-12 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                  className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center">
