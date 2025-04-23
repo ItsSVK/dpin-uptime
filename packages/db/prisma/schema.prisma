@@ -20,20 +20,22 @@ model User {
 }
 
 model Website {
-  id               String        @id @default(uuid())
-  name             String // Added name field for display
+  id               String              @id @default(uuid())
+  name             String
   url              String
   userId           String
   ticks            WebsiteTick[]
-  status           WebsiteStatus @default(UNKNOWN) // Current status
-  upSince          DateTime? // When the site came back online
-  lastCheckedAt    DateTime? // Last monitoring check
-  checkFrequency   Int           @default(60) // Check frequency in seconds
-  isPaused         Boolean       @default(false)
-  monitoringSince  DateTime      @default(now()) // When monitoring started
-  uptimePercentage Float         @default(100) // Rolling uptime percentage
-  averageResponse  Float? // Average response time in ms
-  createdAt        DateTime      @default(now())
+  status           WebsiteStatus       @default(UNKNOWN)
+  upSince          DateTime?
+  lastCheckedAt    DateTime?
+  checkFrequency   Int                 @default(60)
+  isPaused         Boolean             @default(false)
+  monitoringSince  DateTime            @default(now())
+  uptimePercentage Float               @default(100)
+  averageResponse  Float?
+  createdAt        DateTime            @default(now())
+  notifications    NotificationConfig?
+  uptimeHistory    UptimeHistory[]
 }
 
 model Validator {
@@ -82,6 +84,36 @@ model Transaction {
   createdAt       DateTime          @default(now())
 }
 
+model NotificationConfig {
+  id         String   @id @default(uuid())
+  websiteId  String   @unique
+  website    Website  @relation(fields: [websiteId], references: [id])
+  email      Boolean  @default(true)
+  sms        Boolean  @default(false)
+  slack      Boolean  @default(false)
+  webhook    Boolean  @default(false)
+  webhookUrl String?
+  slackUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model UptimeHistory {
+  id               String       @id @default(uuid())
+  websiteId        String
+  website          Website      @relation(fields: [websiteId], references: [id])
+  period           UptimePeriod
+  startDate        DateTime
+  endDate          DateTime
+  uptimePercentage Float
+  averageResponse  Float?
+  totalIncidents   Int          @default(0)
+  totalDowntime    Int          @default(0) // in seconds
+  createdAt        DateTime     @default(now())
+
+  @@unique([websiteId, period, startDate])
+}
+
 enum WebsiteStatus {
   ONLINE // Site is up and running normally
   OFFLINE // Site is down
@@ -93,4 +125,10 @@ enum TransactionStatus {
   Pending
   Success
   Failure
+}
+
+enum UptimePeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
 }

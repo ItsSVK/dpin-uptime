@@ -6,8 +6,15 @@ import { PublicKey } from '@solana/web3.js';
 import nacl from 'tweetnacl';
 import nacl_util from 'tweetnacl-util';
 import type { Validator } from '@prisma/client';
-import { WebsiteStatus } from '@prisma/client';
+import {
+  WebsiteStatus,
+  PrismaClient,
+  Prisma,
+  UptimePeriod,
+} from '@prisma/client';
 import { pusherServer } from '@dpin/pusher';
+import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
+
 const availableValidators: {
   validatorId: string;
   socket: ServerWebSocket<unknown>;
@@ -206,6 +213,221 @@ async function getGeoData(ip: string) {
   }
 }
 
+interface WebsiteTick {
+  status: WebsiteStatus;
+  total: number | null;
+  createdAt: Date;
+}
+
+interface UptimeHistory {
+  uptimePercentage: number;
+  averageResponse: number | null;
+  incidents: number;
+  downtime: number;
+  period: UptimePeriod;
+  startDate: Date;
+  endDate: Date;
+  totalIncidents: number;
+  totalDowntime: number;
+}
+
+async function calculateHistoricalUptime(
+  tx: Prisma.TransactionClient,
+  websiteId: string,
+  period: UptimePeriod,
+  startDate: Date
+): Promise<UptimeHistory | null> {
+  const endDate = new Date(startDate);
+  let durationInHours: number;
+
+  switch (period) {
+    case UptimePeriod.DAILY:
+      endDate.setDate(endDate.getDate() + 1);
+      durationInHours = 24;
+      break;
+    case UptimePeriod.WEEKLY:
+      endDate.setDate(endDate.getDate() + 7);
+      durationInHours = 168;
+      break;
+    case UptimePeriod.MONTHLY:
+      endDate.setMonth(endDate.getMonth() + 1);
+      durationInHours = endDate.getDate() * 24;
+      break;
+  }
+
+  const ticks = await tx.websiteTick.findMany({
+    where: {
+      websiteId,
+      createdAt: {
+        gte: startDate,
+        lt: endDate,
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (ticks.length === 0) return null;
+
+  const totalTicks = ticks.length;
+  const upTicks = ticks.filter(
+    (tick: WebsiteTick) => tick.status === WebsiteStatus.ONLINE
+  ).length;
+  const uptimePercentage = (upTicks / totalTicks) * 100;
+
+  const validResponseTimes = ticks.filter(
+    (tick: WebsiteTick) => tick.total != null
+  );
+  const averageResponse =
+    validResponseTimes.length > 0
+      ? validResponseTimes.reduce(
+          (sum: number, tick: WebsiteTick) => sum + (tick.total || 0),
+          0
+        ) / validResponseTimes.length
+      : null;
+
+  const incidents = ticks.reduce(
+    (acc: number, tick: WebsiteTick, index: number) => {
+      if (
+        tick.status === WebsiteStatus.OFFLINE &&
+        (index === 0 || ticks[index - 1].status !== WebsiteStatus.OFFLINE)
+      ) {
+        acc++;
+      }
+      return acc;
+    },
+    0
+  );
+
+  const downtime = ticks.reduce((acc: number, tick: WebsiteTick) => {
+    if (tick.status === WebsiteStatus.OFFLINE) {
+      acc += 60; // Assuming 60-second check frequency
+    }
+    return acc;
+  }, 0);
+
+  return {
+    period,
+    startDate,
+    endDate,
+    uptimePercentage,
+    averageResponse,
+    incidents,
+    downtime,
+    totalIncidents: incidents,
+    totalDowntime: downtime,
+  };
+}
+
+async function updateHistoricalData(
+  tx: Prisma.TransactionClient,
+  websiteId: string
+): Promise<void> {
+  const daily = await calculateHistoricalUptime(
+    tx,
+    websiteId,
+    UptimePeriod.DAILY,
+    startOfDay(new Date())
+  );
+  const weekly = await calculateHistoricalUptime(
+    tx,
+    websiteId,
+    UptimePeriod.WEEKLY,
+    startOfWeek(new Date())
+  );
+  const monthly = await calculateHistoricalUptime(
+    tx,
+    websiteId,
+    UptimePeriod.MONTHLY,
+    startOfMonth(new Date())
+  );
+
+  // Update or create historical uptime records using upsert
+  await tx.uptimeHistory.upsert({
+    where: {
+      websiteId_period_startDate: {
+        websiteId,
+        period: UptimePeriod.DAILY,
+        startDate: startOfDay(new Date()),
+      },
+    },
+    create: {
+      websiteId,
+      period: UptimePeriod.DAILY,
+      startDate: startOfDay(new Date()),
+      endDate: new Date(),
+      uptimePercentage: daily?.uptimePercentage ?? 0,
+      averageResponse: daily?.averageResponse ?? null,
+      totalIncidents: daily?.totalIncidents ?? 0,
+      totalDowntime: daily?.totalDowntime ?? 0,
+    },
+    update: {
+      endDate: new Date(),
+      uptimePercentage: daily?.uptimePercentage ?? 0,
+      averageResponse: daily?.averageResponse ?? null,
+      totalIncidents: daily?.totalIncidents ?? 0,
+      totalDowntime: daily?.totalDowntime ?? 0,
+    },
+  });
+
+  if (weekly) {
+    await tx.uptimeHistory.upsert({
+      where: {
+        websiteId_period_startDate: {
+          websiteId,
+          period: UptimePeriod.WEEKLY,
+          startDate: startOfWeek(new Date()),
+        },
+      },
+      create: {
+        websiteId,
+        period: UptimePeriod.WEEKLY,
+        startDate: startOfWeek(new Date()),
+        endDate: new Date(),
+        uptimePercentage: weekly.uptimePercentage,
+        averageResponse: weekly.averageResponse,
+        totalIncidents: weekly.totalIncidents,
+        totalDowntime: weekly.totalDowntime,
+      },
+      update: {
+        endDate: new Date(),
+        uptimePercentage: weekly.uptimePercentage,
+        averageResponse: weekly.averageResponse,
+        totalIncidents: weekly.totalIncidents,
+        totalDowntime: weekly.totalDowntime,
+      },
+    });
+  }
+
+  if (monthly) {
+    await tx.uptimeHistory.upsert({
+      where: {
+        websiteId_period_startDate: {
+          websiteId,
+          period: UptimePeriod.MONTHLY,
+          startDate: startOfMonth(new Date()),
+        },
+      },
+      create: {
+        websiteId,
+        period: UptimePeriod.MONTHLY,
+        startDate: startOfMonth(new Date()),
+        endDate: new Date(),
+        uptimePercentage: monthly.uptimePercentage,
+        averageResponse: monthly.averageResponse,
+        totalIncidents: monthly.totalIncidents,
+        totalDowntime: monthly.totalDowntime,
+      },
+      update: {
+        endDate: new Date(),
+        uptimePercentage: monthly.uptimePercentage,
+        averageResponse: monthly.averageResponse,
+        totalIncidents: monthly.totalIncidents,
+        totalDowntime: monthly.totalDowntime,
+      },
+    });
+  }
+}
+
 setInterval(async () => {
   const websitesToMonitor = await prismaClient.website.findMany({
     where: {
@@ -389,6 +611,9 @@ setInterval(async () => {
                 pendingPayouts: { increment: COST_PER_VALIDATION },
               },
             });
+
+            // Add historical data update
+            await updateHistoricalData(tx, website.id);
           });
 
           const updatedWebsite = await prismaClient.website.findUnique({

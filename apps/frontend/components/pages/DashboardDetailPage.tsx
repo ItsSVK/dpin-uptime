@@ -14,15 +14,47 @@ import { WebsiteHeader } from '@/components/pages/website/website-header';
 import { WebsiteOverview } from '@/components/pages/website/website-overview';
 import { UptimeHistoryChart } from '@/components/pages/website/uptime-history-chart';
 import { ResponseTimeChart } from '@/components/pages/website/response-time-chart';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getWebsite } from '@/actions/website';
+import { processWebsiteData } from '@/lib/websiteUtils';
+import { ProcessedWebsite } from '@/types/website';
+// import { pusherClient } from '@dpin/pusher';
 
 export default function DashboardDetailPage({ id }: { id: string }) {
+  const [website, setWebsite] = useState<ProcessedWebsite | null>(null);
   const [notifications, setNotifications] = useState({
     email: true,
     sms: false,
     slack: true,
     webhook: false,
   });
+
+  useEffect(() => {
+    const fetchWebsite = async () => {
+      const response = await getWebsite(id);
+      if (response.success && response.data) {
+        setWebsite(processWebsiteData(response.data));
+      }
+    };
+    fetchWebsite();
+    const interval = setInterval(fetchWebsite, 60 * 1000);
+    // Subscribe to real-time updates
+    // pusherClient.subscribe('UPDATED_WEBSITE');
+    // pusherClient.bind('website-updated', async (updatedId: string) => {
+    //   if (updatedId === id) {
+    //     fetchWebsite();
+    //   }
+    // });
+
+    // return () => {
+    //   pusherClient.unsubscribe('UPDATED_WEBSITE');
+    //   pusherClient.unbind('website-updated');
+    // };
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [id]);
 
   const handleNotificationChange = (type: keyof typeof notifications) => {
     setNotifications(prev => ({
@@ -31,31 +63,9 @@ export default function DashboardDetailPage({ id }: { id: string }) {
     }));
   };
 
-  // In a real application, you would fetch the website data based on the ID
-  // For this example, we'll use mock data
-  const website = {
-    id: id,
-    name: 'example.com',
-    url: 'https://example.com',
-    status: 'online',
-    uptime: {
-      day: 99.98,
-      week: 99.95,
-      month: 99.92,
-      year: 99.87,
-    },
-    responseTime: {
-      current: 187,
-      average: {
-        day: 192,
-        week: 198,
-        month: 205,
-      },
-    },
-    lastChecked: '2 minutes ago',
-    monitoringSince: 'Jan 15, 2023',
-    checkFrequency: '60 seconds',
-  };
+  if (!website) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="container space-y-6 p-8 pt-6 mx-auto">
@@ -82,18 +92,12 @@ export default function DashboardDetailPage({ id }: { id: string }) {
       <WebsiteOverview website={website} />
 
       <Tabs defaultValue="uptime" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto bg-zinc-800 p-1 rounded-md h-10">
+        <TabsList className="grid w-full grid-cols-2 lg:w-auto bg-zinc-800 p-1 rounded-md h-10">
           <TabsTrigger
             value="uptime"
             className="text-zinc-400 data-[state=active]:bg-zinc-950 data-[state=active]:text-white rounded-sm"
           >
             Uptime
-          </TabsTrigger>
-          <TabsTrigger
-            value="performance"
-            className="text-zinc-400 data-[state=active]:bg-zinc-950 data-[state=active]:text-white rounded-sm"
-          >
-            Performance
           </TabsTrigger>
           <TabsTrigger
             value="settings"
@@ -103,13 +107,19 @@ export default function DashboardDetailPage({ id }: { id: string }) {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="uptime" className="space-y-4 pt-4">
-          <div className="grid gap-12">
-            <UptimeHistoryChart />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <UptimeHistoryChart website={website} />
+            </div>
+            <div>
+              <ResponseTimeChart website={website} />
+            </div>
           </div>
         </TabsContent>
+
         <TabsContent value="performance" className="space-y-4 pt-4">
           <div className="grid gap-12">
-            <ResponseTimeChart />
+            <ResponseTimeChart website={website} />
           </div>
         </TabsContent>
         <TabsContent value="settings" className="space-y-4 pt-4">
