@@ -4,6 +4,7 @@ import { Website, WebsiteTick } from '@/types/website';
 import { prismaClient } from 'db/client';
 import { formatUrl } from '@/lib/url';
 import { getUserFromJWT } from '@/lib/auth';
+import { WebsiteStatus } from '@prisma/client';
 
 interface Response<T> {
   success: boolean;
@@ -26,7 +27,6 @@ export async function getWebsite(
     where: {
       id,
       userId: user.walletAddress,
-      disabled: false,
     },
     include: {
       ticks: {
@@ -64,7 +64,9 @@ export async function getWebsites(): Promise<
   const data = await prismaClient.website.findMany({
     where: {
       userId: user.walletAddress,
-      disabled: false,
+    },
+    orderBy: {
+      createdAt: 'desc',
     },
     include: {
       ticks: true,
@@ -77,7 +79,11 @@ export async function getWebsites(): Promise<
   };
 }
 
-export async function createWebsite(url: string): Promise<Response<Website>> {
+export async function createWebsite(
+  url: string,
+  urlName: string,
+  checkFrequency: number
+): Promise<Response<Website>> {
   const user = await getUserFromJWT();
   if (!user) {
     return {
@@ -86,10 +92,18 @@ export async function createWebsite(url: string): Promise<Response<Website>> {
     };
   }
 
+  const formattedUrl = formatUrl(url);
+  const name = urlName || new URL(formattedUrl).hostname;
+
   const data = await prismaClient.website.create({
     data: {
-      url: formatUrl(url),
+      url: formattedUrl,
+      name,
       userId: user.walletAddress,
+      status: WebsiteStatus.UNKNOWN,
+      checkFrequency,
+      uptimePercentage: 100,
+      monitoringSince: new Date(),
     },
   });
 
@@ -126,4 +140,40 @@ export async function updateWebsite(
     success: true,
     data: updatedData,
   };
+}
+
+export async function deleteWebsite(ids: string[]): Promise<Response<void>> {
+  const user = await getUserFromJWT();
+  if (!user) {
+    return {
+      success: false,
+      message: 'Unauthorized',
+    };
+  }
+
+  try {
+    await prismaClient.$transaction([
+      prismaClient.websiteTick.deleteMany({
+        where: {
+          websiteId: { in: ids },
+        },
+      }),
+      prismaClient.website.deleteMany({
+        where: {
+          id: { in: ids },
+          userId: user.walletAddress,
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error('Failed to delete website:', error);
+    return {
+      success: false,
+      message: 'Failed to delete website',
+    };
+  }
 }

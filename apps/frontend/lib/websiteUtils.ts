@@ -31,57 +31,58 @@ export function processWebsiteData(
 
     // Window is considered up if majority of ticks are up
     const upTicks = windowTicks.filter(
-      tick => tick.status === WebsiteStatus.GOOD
+      tick => tick.status === WebsiteStatus.ONLINE
     ).length;
-    windows[9 - i] =
-      windowTicks.length === 0
-        ? WebsiteStatus.UNKNOWN
-        : upTicks / windowTicks.length >= 0.5
-          ? WebsiteStatus.GOOD
-          : WebsiteStatus.BAD;
+
+    if (windowTicks.length === 0) {
+      windows[9 - i] = WebsiteStatus.UNKNOWN;
+    } else {
+      const upRatio = upTicks / windowTicks.length;
+      if (upRatio >= 0.8) {
+        windows[9 - i] = WebsiteStatus.ONLINE;
+      } else if (upRatio >= 0.5) {
+        windows[9 - i] = WebsiteStatus.DEGRADED;
+      } else {
+        windows[9 - i] = WebsiteStatus.OFFLINE;
+      }
+    }
   }
 
-  // Calculate overall status and uptime percentage
-  const totalTicks = sortedTicks.length;
-  const upTicks = sortedTicks.filter(
-    tick => tick.status === WebsiteStatus.GOOD
-  ).length;
-  const uptimePercentage =
-    totalTicks === 0 ? 100 : (upTicks / totalTicks) * 100;
+  // Calculate average response time from recent ticks
+  const validResponseTimes = recentTicks
+    .filter(tick => tick.total != null)
+    .map(tick => tick.total!);
+  const averageResponse =
+    validResponseTimes.length > 0
+      ? validResponseTimes.reduce((a, b) => a + b, 0) /
+        validResponseTimes.length
+      : null;
 
   // Get the most recent status
-  const currentStatus = windows[windows.length - 1];
+  const currentStatus = sortedTicks[0]?.status || WebsiteStatus.UNKNOWN;
 
   // Format the last checked time
   const lastChecked = sortedTicks[0]
-    ? new Date(sortedTicks[0].createdAt).toLocaleTimeString()
+    ? timeSince(new Date(sortedTicks[0].createdAt))
     : 'Never';
 
   return {
     ...website,
-    ticks: sortedTicks,
     status: currentStatus,
-    responseTime: sortedTicks[0]?.total ?? 0,
-    uptime: uptimePercentage,
-    uptimePercentage,
+    responseTime: averageResponse,
     lastChecked,
     uptimeTicks: windows,
+    ticks: sortedTicks,
   };
 }
 
-export function timeSince(dateInput: string | Date): string {
-  const now = new Date();
-  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+export function timeSince(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
 
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
-
-  const parts = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  parts.push(`${remainingSeconds}s`);
-
-  return parts.join(' ');
+  if (seconds < 60) return 'just now';
+  if (seconds < 120) return '1 min ago';
+  if (seconds < 3600) return Math.floor(seconds / 60) + ' mins ago';
+  if (seconds < 7200) return '1 hour ago';
+  if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+  return Math.floor(seconds / 86400) + ' days ago';
 }

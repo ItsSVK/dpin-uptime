@@ -1,75 +1,89 @@
 'use client';
-
-import { useState, useMemo } from 'react';
-import { Globe, Plus } from 'lucide-react';
-import { WebsiteCard } from '@/components/website/WebsiteCard';
-import { CreateWebsiteModal } from '@/components/modals/CreateWebsiteModal';
-import { processWebsiteData } from '@/lib/websiteUtils';
-import { Website, WebsiteTick } from '@/types/website';
-import { createWebsite } from '@/actions/website';
+import { PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { WebsiteListHeader } from '@/components/pages/website-list/website-list-header';
+import { WebsiteListFilters } from '@/components/pages/website-list/website-list-filters';
+import { WebsiteListTable } from '@/components/pages/website-list/website-list-table';
+import { WebsiteListStats } from '@/components/pages/website-list/website-list-stats';
+import { WebsiteListEmptyState } from '@/components/pages/website-list/website-list-empty-state';
+import { WebsiteAddOrUpdateDialog } from '@/components/pages/website-list/website-add-update-dialog';
+import { ProcessedWebsite } from '@/types/website';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-export default function DashboardPage({
-  websites,
-}: {
-  websites: (Website & { ticks: WebsiteTick[] })[];
-}) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+import { WebsiteStatus } from '@prisma/client';
 
-  const processedWebsites = useMemo(
-    () => websites.map(processWebsiteData),
-    [websites]
-  );
-  const router = useRouter();
-
-  const handleAddWebsite = async (url: string | null) => {
-    if (!url) {
-      setIsModalOpen(false);
-      return;
-    }
-    try {
-      await createWebsite(url);
-      setIsModalOpen(false);
-      router.refresh();
-    } catch (error) {
-      console.error('Failed to add website:', error);
-    }
+interface DashboardPageProps {
+  websites: ProcessedWebsite[];
+  stats: {
+    total: number;
+    online: number;
+    issues: number;
+    avgUptime: number;
+    avgResponse: number;
   };
+}
+
+export default function DashboardPage({ websites, stats }: DashboardPageProps) {
+  const hasWebsites = websites.length > 0;
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatuses, setSelectedStatuses] = useState<WebsiteStatus[]>([]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('refreshing data');
+      router.refresh();
+    }, 1000 * 60);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Filter websites based on search query and selected statuses
+  const filteredWebsites = useMemo(() => {
+    return websites.filter(website => {
+      // Apply search filter
+      const matchesSearch =
+        searchQuery === '' ||
+        website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        website.url.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Apply status filter
+      const matchesStatus =
+        selectedStatuses.length === 0 ||
+        selectedStatuses.includes(website.status);
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [websites, searchQuery, selectedStatuses]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <div className="max-w-4xl mx-auto py-8 px-4">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-2">
-            <Globe className="w-8 h-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Uptime Monitor
-            </h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Website</span>
-            </button>
-          </div>
-        </div>
+    <div className="container space-y-6 p-8 pt-6 w-full max-w-screen-xl mx-auto">
+      <WebsiteListHeader />
 
-        <div className="space-y-4">
-          {processedWebsites.map(website => (
-            <WebsiteCard key={website.id} website={website} />
-          ))}
-          {processedWebsites.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No websites added yet. Click &quot;Add Website&quot; to get
-              started.
-            </div>
-          )}
-        </div>
+      {hasWebsites ? (
+        <>
+          <WebsiteListStats stats={stats} />
+          <WebsiteListFilters
+            onSearch={setSearchQuery}
+            onFilterStatus={setSelectedStatuses}
+          />
+          <WebsiteListTable websites={filteredWebsites} />
+        </>
+      ) : (
+        <WebsiteListEmptyState />
+      )}
+
+      <div className="fixed bottom-8 right-8">
+        <WebsiteAddOrUpdateDialog>
+          <Button
+            size="lg"
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+          >
+            <PlusCircle className="h-5 w-5" />
+            Add Website
+          </Button>
+        </WebsiteAddOrUpdateDialog>
       </div>
-
-      <CreateWebsiteModal isOpen={isModalOpen} onClose={handleAddWebsite} />
     </div>
   );
 }

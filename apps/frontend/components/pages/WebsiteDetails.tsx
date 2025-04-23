@@ -8,13 +8,14 @@ import { timeSince } from '@/lib/websiteUtils';
 import { pusherClient } from '@dpin/pusher';
 import { getWebsite, updateWebsite } from '@/actions/website';
 import { Card } from '@/components/ui/card';
+
 interface WebsiteDetailsProps {
   id: string;
   initialWebsite: Website & { ticks: WebsiteTick[] };
 }
 
 function isServerDown(website: Website & { ticks: WebsiteTick[] }) {
-  return website.ticks[website.ticks.length - 1]?.status === WebsiteStatus.BAD;
+  return website.status === WebsiteStatus.OFFLINE;
 }
 
 function WebsiteDetails({ id, initialWebsite }: WebsiteDetailsProps) {
@@ -24,10 +25,12 @@ function WebsiteDetails({ id, initialWebsite }: WebsiteDetailsProps) {
 
   useEffect(() => {
     pusherClient.subscribe('UPDATED_WEBSITE');
-    pusherClient.bind('website-updated', (updatedId: string) => {
-      console.log('website-updated', updatedId);
+    pusherClient.bind('website-updated', async (updatedId: string) => {
       if (updatedId === id) {
-        getWebsite(id).then(setWebsite);
+        const response = await getWebsite(id);
+        if (response.success && response.data) {
+          setWebsite(response.data);
+        }
       }
     });
 
@@ -44,16 +47,66 @@ function WebsiteDetails({ id, initialWebsite }: WebsiteDetailsProps) {
     if (!website || !website.upSince) return;
 
     const updateTimer = () => {
-      setUptime(timeSince(website.upSince!.toString()));
-      setLastCheckedAt(timeSince(website.lastCheckedAt!.toString()));
+      if (website.upSince) {
+        setUptime(timeSince(new Date(website.upSince)));
+      }
+      if (website.lastCheckedAt) {
+        setLastCheckedAt(timeSince(new Date(website.lastCheckedAt)));
+      }
     };
+    updateTimer(); // Call immediately
     const timer = setInterval(updateTimer, 1000);
 
     return () => clearInterval(timer);
   }, [website]);
 
-  const handlePause = () => {
-    updateWebsite(id, { isPaused: !website.isPaused }).then(setWebsite);
+  const handlePause = async () => {
+    const response = await updateWebsite(id, { isPaused: !website.isPaused });
+    if (response.success && response.data) {
+      setWebsite(response.data);
+    }
+  };
+
+  const getStatusColor = () => {
+    if (website.isPaused) return 'text-yellow-400';
+    switch (website.status) {
+      case WebsiteStatus.ONLINE:
+        return 'text-green-400';
+      case WebsiteStatus.OFFLINE:
+        return 'text-red-400';
+      case WebsiteStatus.DEGRADED:
+        return 'text-yellow-400';
+      default:
+        return 'text-gray-400';
+    }
+  };
+
+  const getStatusDot = () => {
+    if (website.isPaused) return 'bg-yellow-400';
+    switch (website.status) {
+      case WebsiteStatus.ONLINE:
+        return 'bg-green-400';
+      case WebsiteStatus.OFFLINE:
+        return 'bg-red-400';
+      case WebsiteStatus.DEGRADED:
+        return 'bg-yellow-400';
+      default:
+        return 'bg-gray-400';
+    }
+  };
+
+  const getStatusText = () => {
+    if (website.isPaused) return 'Paused';
+    switch (website.status) {
+      case WebsiteStatus.ONLINE:
+        return 'Up';
+      case WebsiteStatus.OFFLINE:
+        return 'Down';
+      case WebsiteStatus.DEGRADED:
+        return 'Degraded';
+      default:
+        return 'Unknown';
+    }
   };
 
   return (
@@ -61,35 +114,13 @@ function WebsiteDetails({ id, initialWebsite }: WebsiteDetailsProps) {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-2 mb-6">
-          <div
-            className={`w-2 h-2 rounded-full ${
-              website.isPaused
-                ? 'bg-yellow-400'
-                : isServerDown(website)
-                  ? 'bg-red-400'
-                  : 'bg-green-400'
-            }`}
-          ></div>
+          <div className={`w-2 h-2 rounded-full ${getStatusDot()}`}></div>
           <h1 className="text-2xl font-semibold">
-            {website?.url || 'Loading...'}
+            {website.name || website.url}
           </h1>
-          <span
-            className={`text-sm ${
-              website.isPaused
-                ? 'text-yellow-400'
-                : isServerDown(website)
-                  ? 'text-red-400'
-                  : 'text-green-400'
-            }`}
-          >
-            {website.isPaused
-              ? 'Paused'
-              : isServerDown(website)
-                ? 'Down'
-                : 'Up'}
-          </span>
+          <span className={getStatusColor()}>{getStatusText()}</span>
           <span className="text-gray-400 text-sm">
-            · Checked every {website?.checkFrequency} minutes
+            · Checked every {Math.round(website.checkFrequency / 60)} minutes
           </span>
         </div>
 
@@ -107,19 +138,17 @@ function WebsiteDetails({ id, initialWebsite }: WebsiteDetailsProps) {
             className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
             onClick={handlePause}
           >
-            <>
-              {website.isPaused ? (
-                <div className="text-green-400 hover:text-green-300 flex items-center gap-2">
-                  <Play size={18} />
-                  <span>Resume</span>
-                </div>
-              ) : (
-                <div className="text-red-400 hover:text-red-300 flex items-center gap-2">
-                  <Pause size={18} />
-                  <span>Pause</span>
-                </div>
-              )}
-            </>
+            {website.isPaused ? (
+              <div className="text-green-400 hover:text-green-300 flex items-center gap-2">
+                <Play size={18} />
+                <span>Resume</span>
+              </div>
+            ) : (
+              <div className="text-red-400 hover:text-red-300 flex items-center gap-2">
+                <Pause size={18} />
+                <span>Pause</span>
+              </div>
+            )}
           </button>
           <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
             <Settings size={18} />
@@ -131,15 +160,7 @@ function WebsiteDetails({ id, initialWebsite }: WebsiteDetailsProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <Card className="bg-[#232936] p-4 border-gray-700 rounded-2xl">
             <div className="text-gray-400 mb-1">Currently up for</div>
-            <div
-              className={`text-2xl font-semibold ${
-                website.isPaused
-                  ? 'text-gray-400'
-                  : isServerDown(website)
-                    ? 'text-red-400'
-                    : 'text-white-400'
-              }`}
-            >
+            <div className={`text-2xl font-semibold ${getStatusColor()}`}>
               {website.isPaused
                 ? 'Paused'
                 : isServerDown(website)
@@ -157,10 +178,38 @@ function WebsiteDetails({ id, initialWebsite }: WebsiteDetailsProps) {
               {website.isPaused ? 'Paused' : lastCheckedAt}
             </div>
           </Card>
-          {/* <Card className="bg-[#232936] p-4 border-gray-700 rounded-2xl">
-            <div className="text-gray-400 mb-1">Incidents</div>
-            <div className="text-2xl font-semibold">0</div>
-          </Card> */}
+          <Card className="bg-[#232936] p-4 border-gray-700 rounded-2xl">
+            <div className="text-gray-400 mb-1">Uptime</div>
+            <div
+              className={`text-2xl font-semibold ${
+                website.uptimePercentage >= 99.9
+                  ? 'text-green-400'
+                  : website.uptimePercentage >= 99
+                    ? 'text-yellow-400'
+                    : 'text-red-400'
+              }`}
+            >
+              {website.uptimePercentage.toFixed(2)}%
+            </div>
+          </Card>
+          <Card className="bg-[#232936] p-4 border-gray-700 rounded-2xl">
+            <div className="text-gray-400 mb-1">Average Response Time</div>
+            <div
+              className={`text-2xl font-semibold ${
+                website.averageResponse
+                  ? website.averageResponse < 200
+                    ? 'text-green-400'
+                    : website.averageResponse < 500
+                      ? 'text-yellow-400'
+                      : 'text-red-400'
+                  : 'text-gray-400'
+              }`}
+            >
+              {website.averageResponse
+                ? `${Math.round(website.averageResponse)}ms`
+                : 'N/A'}
+            </div>
+          </Card>
         </div>
 
         <WebsiteChart data={website.ticks || []} />

@@ -1,6 +1,6 @@
 import { Globe, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { WebsiteAddDialog } from '@/components/pages/website-list/website-add-dialog';
+import { WebsiteAddOrUpdateDialog } from '@/components/pages/website-list/website-add-update-dialog';
 
 export function WebsiteListEmptyState() {
   return (
@@ -14,12 +14,12 @@ export function WebsiteListEmptyState() {
         start tracking its uptime and performance.
       </p>
       <div className="mt-6">
-        <WebsiteAddDialog>
+        <WebsiteAddOrUpdateDialog>
           <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">
             <PlusCircle className="h-4 w-4" />
             Add Your First Website
           </Button>
-        </WebsiteAddDialog>
+        </WebsiteAddOrUpdateDialog>
       </div>
     </div>
   );

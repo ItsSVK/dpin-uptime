@@ -128,11 +128,11 @@ async function signupHandler(
   }
 }
 
-async function addMinutes(date: Date | null, minutes: number) {
+async function addSeconds(date: Date | null, seconds: number): Promise<Date> {
   if (!date) {
     return new Date();
   }
-  return new Date(date.getTime() + minutes * 60 * 1000);
+  return new Date(date.getTime() + seconds * 1000);
 }
 
 async function verifyMessage(
@@ -209,7 +209,7 @@ async function getGeoData(ip: string) {
 setInterval(async () => {
   const websitesToMonitor = await prismaClient.website.findMany({
     where: {
-      disabled: false,
+      isPaused: false,
     },
   });
 
@@ -217,14 +217,26 @@ setInterval(async () => {
     return;
   }
 
-  const websiteByFrequency = websitesToMonitor.filter(
-    async website =>
-      (
-        await addMinutes(website.lastCheckedAt, website.checkFrequency)
-      ).getTime() < Date.now()
-  );
+  const websiteByFrequency = await Promise.all(
+    websitesToMonitor.map(async website => {
+      const nextCheck = await addSeconds(
+        website.lastCheckedAt,
+        website.checkFrequency
+      );
+      return {
+        website,
+        shouldCheck: nextCheck.getTime() <= new Date().getTime(),
+      };
+    })
+  ).then(results => results.filter(r => r.shouldCheck).map(r => r.website));
 
-  console.log(`Sending validate to ${websiteByFrequency.length} validators`);
+  if (websiteByFrequency.length === 0) {
+    return;
+  }
+
+  console.log(
+    `Sending validate to ${availableValidators.length} validators for ${websiteByFrequency.length} websites`
+  );
 
   for (const website of websiteByFrequency) {
     if (website.isPaused) {
@@ -276,9 +288,6 @@ setInterval(async () => {
           }
 
           console.log('Validation Results:');
-          console.log(
-            'validatorId, statusCode, nameLookup, connection, tlsHandshake, dataTransfer, ttfb, total, error'
-          );
           console.table({
             validatorId,
             statusCode,
@@ -291,37 +300,72 @@ setInterval(async () => {
             error,
           });
 
-          const status =
-            statusCode >= 200 && statusCode < 400
-              ? WebsiteStatus.GOOD
-              : WebsiteStatus.BAD;
+          const status = data.data.error
+            ? WebsiteStatus.OFFLINE
+            : data.data.total > 1000
+              ? WebsiteStatus.DEGRADED
+              : WebsiteStatus.ONLINE;
 
           await prismaClient.$transaction(async tx => {
-            if (website.upSince === null && status === WebsiteStatus.GOOD) {
+            // Calculate new uptime percentage
+            const recentTicks = await tx.websiteTick.findMany({
+              where: {
+                websiteId: website.id,
+                createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Last 24 hours
+              },
+              orderBy: { createdAt: 'desc' },
+            });
+
+            const totalTicks = recentTicks.length + 1; // Including current tick
+            const upTicks =
+              recentTicks.filter(tick => tick.status === WebsiteStatus.ONLINE)
+                .length + (status === WebsiteStatus.ONLINE ? 1 : 0);
+            const newUptimePercentage = (upTicks / totalTicks) * 100;
+
+            // Calculate new average response time
+            const validTicks = recentTicks.filter(tick => tick.total != null);
+            const totalResponseTime =
+              validTicks.reduce((sum, tick) => sum + (tick.total || 0), 0) +
+              (data.data.total || 0);
+            const newAverageResponse =
+              totalResponseTime / (validTicks.length + 1);
+
+            if (website.upSince === null && status === WebsiteStatus.ONLINE) {
               await tx.website.update({
                 where: { id: website.id },
                 data: {
                   upSince: new Date(),
+                  status,
+                  uptimePercentage: newUptimePercentage,
+                  averageResponse: newAverageResponse,
+                  lastCheckedAt: new Date(),
                 },
               });
             } else if (
               website.upSince !== null &&
-              status === WebsiteStatus.BAD
+              status === WebsiteStatus.OFFLINE
             ) {
               await tx.website.update({
                 where: { id: website.id },
                 data: {
                   upSince: null,
+                  status,
+                  uptimePercentage: newUptimePercentage,
+                  averageResponse: newAverageResponse,
+                  lastCheckedAt: new Date(),
+                },
+              });
+            } else {
+              await tx.website.update({
+                where: { id: website.id },
+                data: {
+                  status,
+                  uptimePercentage: newUptimePercentage,
+                  averageResponse: newAverageResponse,
+                  lastCheckedAt: new Date(),
                 },
               });
             }
-
-            await tx.website.update({
-              where: { id: website.id },
-              data: {
-                lastCheckedAt: new Date(),
-              },
-            });
 
             await tx.websiteTick.create({
               data: {

@@ -25,7 +25,6 @@ model Website {
   url              String
   userId           String
   ticks            WebsiteTick[]
-  disabled         Boolean       @default(false)
   status           WebsiteStatus @default(UNKNOWN) // Current status
   upSince          DateTime? // When the site came back online
   lastCheckedAt    DateTime? // Last monitoring check
