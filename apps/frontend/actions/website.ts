@@ -158,6 +158,13 @@ export async function deleteWebsite(ids: string[]): Promise<Response<void>> {
           websiteId: { in: ids },
         },
       }),
+
+      prismaClient.uptimeHistory.deleteMany({
+        where: {
+          websiteId: { in: ids },
+        },
+      }),
+
       prismaClient.website.deleteMany({
         where: {
           id: { in: ids },
