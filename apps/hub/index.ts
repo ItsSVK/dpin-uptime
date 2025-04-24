@@ -12,7 +12,6 @@ import {
   Prisma,
   UptimePeriod,
 } from '@prisma/client';
-import { pusherServer } from '@dpin/pusher';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 
 const availableValidators: {
@@ -112,6 +111,11 @@ async function signupHandler(
       include: {
         ticks: true,
       },
+    });
+  } else {
+    await prismaClient.validator.update({
+      where: { id: validatorDb.id },
+      data: { ip, country, city, latitude, longitude, region },
     });
   }
 
@@ -462,11 +466,6 @@ setInterval(async () => {
 
   for (const website of websiteByFrequency) {
     if (website.isPaused) {
-      await pusherServer.trigger(
-        'UPDATED_WEBSITE',
-        'website-updated',
-        website.id
-      );
       continue;
     }
 
@@ -615,22 +614,6 @@ setInterval(async () => {
             // Add historical data update
             await updateHistoricalData(tx, website.id);
           });
-
-          const updatedWebsite = await prismaClient.website.findUnique({
-            where: { id: website.id },
-            include: {
-              ticks: true,
-            },
-          });
-
-          if (updatedWebsite) {
-            console.log('triggering website-updated', updatedWebsite.id);
-            await pusherServer.trigger(
-              'UPDATED_WEBSITE',
-              'website-updated',
-              updatedWebsite.id
-            );
-          }
         }
       };
     });

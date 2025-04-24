@@ -18,7 +18,6 @@ import { useState, useEffect } from 'react';
 import { getWebsite } from '@/actions/website';
 import { processWebsiteData } from '@/lib/websiteUtils';
 import { ProcessedWebsite } from '@/types/website';
-// import { pusherClient } from '@dpin/pusher';
 
 export default function DashboardDetailPage({ id }: { id: string }) {
   const [website, setWebsite] = useState<ProcessedWebsite | null>(null);
@@ -38,18 +37,6 @@ export default function DashboardDetailPage({ id }: { id: string }) {
     };
     fetchWebsite();
     const interval = setInterval(fetchWebsite, 60 * 1000);
-    // Subscribe to real-time updates
-    // pusherClient.subscribe('UPDATED_WEBSITE');
-    // pusherClient.bind('website-updated', async (updatedId: string) => {
-    //   if (updatedId === id) {
-    //     fetchWebsite();
-    //   }
-    // });
-
-    // return () => {
-    //   pusherClient.unsubscribe('UPDATED_WEBSITE');
-    //   pusherClient.unbind('website-updated');
-    // };
 
     return () => {
       clearInterval(interval);

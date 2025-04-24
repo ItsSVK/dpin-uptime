@@ -13,6 +13,7 @@ import {
   Trash2,
   X,
   HelpCircle,
+  Info,
 } from 'lucide-react';
 import {
   Table,
@@ -149,7 +150,25 @@ export function WebsiteListTable({ websites }: WebsiteListTableProps) {
             </TableHead>
             <TableHead>Website</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Uptime</TableHead>
+            <TableHead className="flex items-center gap-1">
+              Uptime
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      Uptime is the percentage of time the website was online,
+                      <br />
+                      calculated by dividing the number of successful checks by
+                      <br />
+                      the total number of checks in the last 30 days.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </TableHead>
             <TableHead className="hidden md:table-cell">
               Response Time
             </TableHead>
