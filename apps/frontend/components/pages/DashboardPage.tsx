@@ -36,7 +36,7 @@ export default function DashboardPage({ websites, stats }: DashboardPageProps) {
     }, 1000 * 60);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [router]);
 
   // Filter websites based on search query and selected statuses
   const filteredWebsites = useMemo(() => {

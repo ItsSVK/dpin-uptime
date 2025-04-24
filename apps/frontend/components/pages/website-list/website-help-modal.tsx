@@ -34,8 +34,8 @@ export function WebsiteHelpModal({
                 Getting Started
               </h3>
               <p className="text-sm text-zinc-300">
-                DPIN Uptime helps you monitor your websites' availability and
-                performance in real-time. Add your websites and get instant
+                DPIN Uptime helps you monitor your websites&apos; availability
+                and performance in real-time. Add your websites and get instant
                 notifications when they go down or experience issues.
                 <br />
                 <br /> To get started,
@@ -98,7 +98,10 @@ export function WebsiteHelpModal({
                 Managing Websites
               </h3>
               <ul className="list-disc pl-5 text-sm text-zinc-300 space-y-2">
-                <li>Click "Add Website" to monitor a new website</li>
+                <li>
+                  Click <span className="font-semibold">Add Website</span> to
+                  monitor a new website
+                </li>
                 <li>Use filters to sort and search through your websites</li>
                 <li>
                   Click on a website to view detailed statistics and history

@@ -1,4 +1,4 @@
-import { Download, HelpCircle, Plus, UploadCloud } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,

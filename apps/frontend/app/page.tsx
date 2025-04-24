@@ -1,13 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  ArrowRight,
-  Check,
-  ChevronRight,
-  LucideWaves,
-  ServerOff,
-} from 'lucide-react';
+import { Check, ChevronRight, LucideWaves, ServerOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -22,12 +16,9 @@ import { PulseAnimation } from '@/components/pulse-animation';
 import { TrackedSite } from '@/components/tracked-site';
 import { BackgroundGradient } from '@/components/background-gradient';
 import { TextGenerateEffect } from '@/components/text-generate-effect';
-import { Navbar } from '@/components/navbar';
-import { useRouter } from 'next/navigation';
 import { SignInButton } from '@/components/auth/SignInButton';
 
 export default function Home() {
-  const router = useRouter();
   const features = [
     'Real-time monitoring',
     'Instant downtime alerts',
@@ -102,14 +93,6 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  {/* <Button
-                    size="lg"
-                    className="group bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => router.push('/dashboard')}
-                  >
-                    Start monitoring
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Button> */}
                   <SignInButton />
                   <Button variant="outline" className="hidden sm:flex">
                     View demo

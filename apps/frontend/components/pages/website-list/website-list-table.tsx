@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   Check,
   Clock,
-  Copy,
   Edit,
   Pause,
   Play,
@@ -96,7 +95,8 @@ export function WebsiteListTable({ websites }: WebsiteListTableProps) {
             <Checkbox
               checked={allSelected}
               ref={checkbox => {
-                if (checkbox) (checkbox as any).indeterminate = someSelected;
+                if (checkbox)
+                  (checkbox as HTMLInputElement).indeterminate = someSelected;
               }}
               onCheckedChange={toggleAllWebsites}
               className="border-zinc-700 data-[state=checked]:bg-emerald-600 data-[state=checked]:text-white"
@@ -142,7 +142,8 @@ export function WebsiteListTable({ websites }: WebsiteListTableProps) {
               <Checkbox
                 checked={allSelected}
                 ref={checkbox => {
-                  if (checkbox) (checkbox as any).indeterminate = someSelected;
+                  if (checkbox)
+                    (checkbox as HTMLInputElement).indeterminate = someSelected;
                 }}
                 onCheckedChange={toggleAllWebsites}
                 className="border-zinc-700 data-[state=checked]:bg-emerald-600 data-[state=checked]:text-white"

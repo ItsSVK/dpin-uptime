@@ -36,7 +36,7 @@ export function Navbar() {
 
       return () => clearTimeout(timeout);
     }
-  }, [publicKey]);
+  }, [publicKey, connected, router]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-800 bg-black/80 backdrop-blur-sm">

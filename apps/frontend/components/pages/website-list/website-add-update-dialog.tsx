@@ -152,6 +152,7 @@ export function WebsiteAddOrUpdateDialog({
                       setName(urlObj.hostname);
                     } catch (e) {
                       // Invalid URL, ignore
+                      console.error(e);
                     }
                   }
                 }}

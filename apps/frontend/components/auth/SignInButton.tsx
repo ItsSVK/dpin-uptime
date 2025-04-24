@@ -56,7 +56,7 @@ function SignInButtonContent() {
 
       return () => clearTimeout(timeout);
     }
-  }, [publicKey]);
+  }, [publicKey, connected, router]);
 
   const handleSignIn = async () => {
     console.log('Signing in');

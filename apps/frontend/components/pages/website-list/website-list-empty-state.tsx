@@ -10,8 +10,8 @@ export function WebsiteListEmptyState() {
       </div>
       <h3 className="mt-6 text-xl font-semibold">No websites yet</h3>
       <p className="mt-2 max-w-md text-sm text-zinc-500">
-        You haven't added any websites to monitor yet. Add your first website to
-        start tracking its uptime and performance.
+        You haven&apos;t added any websites to monitor yet. Add your first
+        website to start tracking its uptime and performance.
       </p>
       <div className="mt-6">
         <WebsiteAddOrUpdateDialog>

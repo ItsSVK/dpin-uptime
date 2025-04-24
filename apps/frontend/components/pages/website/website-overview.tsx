@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Clock, Globe, Shield, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, Clock, Globe, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProcessedWebsite } from '@/types/website';
 import { WebsiteStatus } from '@prisma/client';
