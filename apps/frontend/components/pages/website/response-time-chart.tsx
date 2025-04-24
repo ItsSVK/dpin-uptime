@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Download } from 'lucide-react';
+import { ChevronDown, Globe } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ProcessedWebsite } from '@/types/website';
-import { WebsiteStatus } from '@prisma/client';
+import { Region } from '@prisma/client';
 import { startOfHour, subHours, format } from 'date-fns';
 
 interface ResponseTimeChartProps {
@@ -27,6 +27,7 @@ interface ResponseTimeChartProps {
 export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [timeRange, setTimeRange] = useState('Last 24 hours');
+  const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,7 +51,10 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
     const startDate = subHours(startOfHour(new Date()), hours);
     const ticks = website.ticks
       .filter(tick => new Date(tick.createdAt) >= startDate)
-      .filter(tick => tick.total !== null);
+      .filter(tick => tick.total !== null)
+      .filter(
+        tick => selectedRegion === 'all' || tick.region === selectedRegion
+      );
 
     // Group ticks by hour and calculate average response time
     const hourlyResponseTimes = new Array(hours).fill(0).map((_, index) => {
@@ -212,7 +216,12 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [timeRange, website.ticks]);
+  }, [timeRange, website.ticks, selectedRegion]);
+
+  // Get unique regions from ticks
+  const availableRegions = Array.from(
+    new Set(website.ticks.map(tick => tick.region))
+  );
 
   return (
     <Card className="border-zinc-800 bg-zinc-950 min-h-[500px]">
@@ -224,6 +233,35 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
           </CardDescription>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 border-zinc-800 bg-zinc-950 text-xs"
+              >
+                <Globe className="h-3.5 w-3.5" />
+                {selectedRegion === 'all' ? 'All Regions' : selectedRegion}
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="border-zinc-800 bg-zinc-950"
+            >
+              <DropdownMenuItem onClick={() => setSelectedRegion('all')}>
+                All Regions
+              </DropdownMenuItem>
+              {availableRegions.map(region => (
+                <DropdownMenuItem
+                  key={region}
+                  onClick={() => setSelectedRegion(region)}
+                >
+                  {region}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

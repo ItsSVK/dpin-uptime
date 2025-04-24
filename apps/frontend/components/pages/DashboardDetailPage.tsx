@@ -82,13 +82,13 @@ export default function DashboardDetailPage({ id }: { id: string }) {
         <TabsList className="grid w-full grid-cols-2 lg:w-auto bg-zinc-800 p-1 rounded-md h-10">
           <TabsTrigger
             value="uptime"
-            className="text-zinc-400 data-[state=active]:bg-zinc-950 data-[state=active]:text-white rounded-sm"
+            className="text-zinc-400 data-[state=active]:bg-zinc-950 data-[state=active]:text-white rounded-sm cursor-pointer"
           >
             Uptime
           </TabsTrigger>
           <TabsTrigger
             value="settings"
-            className="text-zinc-400 data-[state=active]:bg-zinc-950 data-[state=active]:text-white rounded-sm"
+            className="text-zinc-400 data-[state=active]:bg-zinc-950 data-[state=active]:text-white rounded-sm cursor-pointer"
           >
             Settings
           </TabsTrigger>

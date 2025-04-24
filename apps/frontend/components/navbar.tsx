@@ -80,7 +80,7 @@ export function Navbar() {
             <WalletMultiButton className="wallet-adapter-button" />
           )}
           <Button
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
             onClick={() => router.push('/payout')}
           >
             Payout

@@ -36,6 +36,7 @@ model Website {
   createdAt        DateTime            @default(now())
   notifications    NotificationConfig?
   uptimeHistory    UptimeHistory[]
+  preferredRegion  String?
 }
 
 model Validator {
@@ -46,7 +47,7 @@ model Validator {
   latitude         Float
   longitude        Float
   ip               String
-  region           String
+  region           Region
   pendingPayouts   Int           @default(0)
   processingPayout Boolean       @default(false)
   createdAt        DateTime      @default(now())
@@ -60,6 +61,7 @@ model WebsiteTick {
   validatorId  String
   createdAt    DateTime      @default(now())
   status       WebsiteStatus
+  region       Region
   nameLookup   Float? // DNS lookup time
   connection   Float? // Connection time
   tlsHandshake Float? // TLS handshake time
@@ -131,4 +133,11 @@ enum UptimePeriod {
   DAILY
   WEEKLY
   MONTHLY
+}
+
+enum Region {
+  EUROPE
+  NORTH_AMERICA
+  ASIA
+  AUSTRALIA
 }

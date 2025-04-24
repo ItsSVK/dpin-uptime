@@ -5,23 +5,17 @@ import { prismaClient } from 'db/client';
 import { PublicKey } from '@solana/web3.js';
 import nacl from 'tweetnacl';
 import nacl_util from 'tweetnacl-util';
+import { Region } from '@prisma/client';
 import type { Validator } from '@prisma/client';
-import {
-  WebsiteStatus,
-  PrismaClient,
-  Prisma,
-  UptimePeriod,
-} from '@prisma/client';
+import { WebsiteStatus, Prisma, UptimePeriod } from '@prisma/client';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
+import { ValidatorManager } from './utils/validatorSelection';
+import { mapToRegion, isLocalhost } from './utils/region';
 
-const availableValidators: {
-  validatorId: string;
-  socket: ServerWebSocket<unknown>;
-  publicKey: string;
-}[] = [];
-
+const validatorManager = new ValidatorManager();
 const CALLBACKS: { [callbackId: string]: (data: IncomingMessage) => void } = {};
 const COST_PER_VALIDATION = 100; // in lamports
+const VALIDATION_TIMEOUT = 10000; // 10 seconds
 
 Bun.serve({
   fetch(req, server) {
@@ -32,30 +26,11 @@ Bun.serve({
   },
   port: 8081,
   websocket: {
-    async message(ws: ServerWebSocket<unknown>, message: string) {
+    message(ws: ServerWebSocket<unknown>, message: string) {
       const data: IncomingMessage = JSON.parse(message);
 
       if (data.type === MessageType.SIGNUP) {
-        const verified = await verifyMessage(
-          `Signed message for ${data.data.callbackId}, ${data.data.publicKey}`,
-          data.data.publicKey,
-          data.data.signedMessage
-        );
-        if (verified) {
-          const geoData = await getGeoData(ws.remoteAddress || '0.0.0.0');
-
-          const signUpData: SignupIncomingMessage = {
-            ...data.data,
-            ip: geoData.ip,
-            country: geoData.country,
-            city: geoData.city,
-            region: geoData.region,
-            latitude: geoData.latitude,
-            longitude: geoData.longitude,
-          };
-
-          await signupHandler(ws, signUpData);
-        }
+        handleSignupMessage(ws, data);
       } else if (data.type === MessageType.VALIDATE) {
         CALLBACKS[data.data.callbackId](data);
         delete CALLBACKS[data.data.callbackId];
@@ -63,11 +38,15 @@ Bun.serve({
         // do nothing
       }
     },
-    async close(ws: ServerWebSocket<unknown>) {
-      availableValidators.splice(
-        availableValidators.findIndex(v => v.socket === ws),
-        1
-      );
+    close(ws: ServerWebSocket<unknown>) {
+      // Find and remove the validator by socket
+      for (const group of validatorManager['validatorGroups'].values()) {
+        const validator = group.validators.find(v => v.socket === ws);
+        if (validator) {
+          validatorManager.removeValidator(validator.validatorId);
+          break;
+        }
+      }
     },
   },
 });
@@ -87,6 +66,11 @@ async function signupHandler(
 ) {
   let validatorDb: Validator | null = null;
 
+  const mappedRegion =
+    typeof region === 'string'
+      ? mapToRegion(region, latitude, longitude)
+      : region;
+
   validatorDb = await prismaClient.validator.findFirst({
     where: {
       publicKey,
@@ -105,7 +89,7 @@ async function signupHandler(
         city,
         latitude,
         longitude,
-        region,
+        region: mappedRegion,
         ticks: { create: [] },
       },
       include: {
@@ -115,7 +99,14 @@ async function signupHandler(
   } else {
     await prismaClient.validator.update({
       where: { id: validatorDb.id },
-      data: { ip, country, city, latitude, longitude, region },
+      data: {
+        ip,
+        country,
+        city,
+        latitude,
+        longitude,
+        region: mappedRegion,
+      },
     });
   }
 
@@ -130,11 +121,14 @@ async function signupHandler(
       })
     );
 
-    availableValidators.push({
-      validatorId: validatorDb.id,
-      socket: ws,
-      publicKey: validatorDb.publicKey,
-    });
+    validatorManager.addValidator(
+      {
+        validatorId: validatorDb.id,
+        socket: ws,
+        publicKey: validatorDb.publicKey,
+      },
+      mappedRegion
+    );
     return;
   }
 }
@@ -162,6 +156,18 @@ async function verifyMessage(
 }
 
 async function getGeoData(ip: string) {
+  // For localhost/development environments, return a default region
+  if (isLocalhost(ip)) {
+    return {
+      country: 'Development',
+      city: 'Local',
+      region: Region.EUROPE,
+      latitude: 0,
+      longitude: 0,
+      ip: ip,
+    };
+  }
+
   // Try primary provider (ipapi.co)
   try {
     const response = await fetch(`https://ipapi.co/${ip}/json/`);
@@ -171,34 +177,34 @@ async function getGeoData(ip: string) {
       return {
         country: data.country_name,
         city: data.city,
-        region: data.region,
+        region: mapToRegion(data.region, data.latitude, data.longitude),
         latitude: data.latitude,
         longitude: data.longitude,
         ip: ip,
       };
     }
-    throw new Error('Failed to get location data from primary provider', data);
+    throw new Error('Failed to get location data from primary provider');
   } catch (primaryError) {
     console.error('Error with primary geo provider:', primaryError);
 
-    // Try secondary provider (geojs.io - free, no key required, HTTPS)
+    // Try secondary provider (geojs.io)
     try {
       const response = await fetch(`https://get.geojs.io/v1/ip/geo/${ip}.json`);
       const data = await response.json();
 
       if (data.latitude === 'nil') {
-        throw new Error(
-          'Failed to get location data from secondary provider',
-          data
-        );
+        throw new Error('Failed to get location data from secondary provider');
       }
+
+      const lat = parseFloat(data.latitude);
+      const lng = parseFloat(data.longitude);
 
       return {
         country: data.country,
         city: data.city,
-        region: data.region,
-        latitude: parseFloat(data.latitude),
-        longitude: parseFloat(data.longitude),
+        region: mapToRegion(data.region, lat, lng),
+        latitude: lat,
+        longitude: lng,
         ip: ip,
       };
     } catch (secondaryError) {
@@ -208,7 +214,7 @@ async function getGeoData(ip: string) {
       return {
         country: 'Unknown',
         city: 'Unknown',
-        region: 'Unknown',
+        region: Region.EUROPE,
         latitude: 0,
         longitude: 0,
         ip: ip,
@@ -432,6 +438,67 @@ async function updateHistoricalData(
   }
 }
 
+async function validateWebsite(
+  website: any,
+  validator: any,
+  callbackId: string
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      delete CALLBACKS[callbackId];
+      reject(new Error('Validation timeout'));
+    }, VALIDATION_TIMEOUT);
+
+    CALLBACKS[callbackId] = async (data: IncomingMessage) => {
+      clearTimeout(timeoutId);
+      if (data.type === MessageType.VALIDATE) {
+        resolve(data);
+      } else {
+        reject(new Error('Invalid response type'));
+      }
+    };
+
+    validator.socket.send(
+      JSON.stringify({
+        type: MessageType.VALIDATE,
+        data: {
+          url: website.url,
+          callbackId,
+          websiteId: website.id,
+        },
+      })
+    );
+  });
+}
+
+async function handleSignupMessage(
+  ws: ServerWebSocket<unknown>,
+  data: IncomingMessage
+) {
+  if (data.type !== MessageType.SIGNUP) return;
+
+  const verified = await verifyMessage(
+    `Signed message for ${data.data.callbackId}, ${data.data.publicKey}`,
+    data.data.publicKey,
+    data.data.signedMessage
+  );
+  if (verified) {
+    const geoData = await getGeoData(ws.remoteAddress || '0.0.0.0');
+
+    const signUpData: SignupIncomingMessage = {
+      ...data.data,
+      ip: geoData.ip,
+      country: geoData.country,
+      city: geoData.city,
+      region: geoData.region,
+      latitude: geoData.latitude,
+      longitude: geoData.longitude,
+    };
+
+    await signupHandler(ws, signUpData);
+  }
+}
+
 setInterval(async () => {
   const websitesToMonitor = await prismaClient.website.findMany({
     where: {
@@ -439,7 +506,7 @@ setInterval(async () => {
     },
   });
 
-  if (availableValidators.length === 0) {
+  if (validatorManager.getActiveValidatorsCount() === 0) {
     return;
   }
 
@@ -461,31 +528,44 @@ setInterval(async () => {
   }
 
   console.log(
-    `Sending validate to ${availableValidators.length} validators for ${websiteByFrequency.length} websites`
+    `Processing ${websiteByFrequency.length} websites for validation`
   );
 
   for (const website of websiteByFrequency) {
-    if (website.isPaused) {
+    if (website.isPaused) continue;
+
+    const selections = validatorManager.selectValidators();
+    let validatorsByRegion = Array.from(selections.entries())
+      .filter(([_, selection]) => selection !== null)
+      .map(([region, selection]) => ({ region, ...selection! }));
+
+    if (validatorsByRegion.length === 0) {
+      console.log(`No available validators for website ${website.url}`);
       continue;
     }
 
-    availableValidators.forEach(validator => {
-      const callbackId = randomUUIDv7();
-      console.log(
-        `Sending validate to ${validator.validatorId} ${website.url}`
+    // If preferred region is specified, prioritize that validator
+    if (website.preferredRegion) {
+      const preferredValidator = validatorsByRegion.find(
+        v => v.region === website.preferredRegion
       );
-      validator.socket.send(
-        JSON.stringify({
-          type: MessageType.VALIDATE,
-          data: {
-            url: website.url,
-            callbackId,
-            websiteId: website.id,
-          },
-        })
+      if (preferredValidator) {
+        validatorsByRegion = [preferredValidator];
+      }
+    }
+
+    for (const { region, validator } of validatorsByRegion) {
+      const callbackId = randomUUIDv7();
+
+      console.log(
+        `Sending validate to ${validator.validatorId} (${region}) for ${website.url}`
       );
 
-      CALLBACKS[callbackId] = async (data: IncomingMessage) => {
+      validatorManager.updateValidatorMetrics(validator.validatorId, true);
+
+      try {
+        const data = await validateWebsite(website, validator, callbackId);
+
         if (data.type === MessageType.VALIDATE) {
           const {
             validatorId,
@@ -499,31 +579,21 @@ setInterval(async () => {
             error,
             signedMessage,
           } = data.data;
+
           const verified = await verifyMessage(
             `Replying to ${callbackId}`,
             validator.publicKey,
             signedMessage
           );
+
           if (!verified) {
-            return;
+            console.error('Invalid signature from validator');
+            continue;
           }
 
-          console.log('Validation Results:');
-          console.table({
-            validatorId,
-            statusCode,
-            nameLookup,
-            connection,
-            tlsHandshake,
-            dataTransfer,
-            ttfb,
-            total,
-            error,
-          });
-
-          const status = data.data.error
+          const status = error
             ? WebsiteStatus.OFFLINE
-            : data.data.total > 1000
+            : total > 1000
               ? WebsiteStatus.DEGRADED
               : WebsiteStatus.ONLINE;
 
@@ -592,6 +662,7 @@ setInterval(async () => {
               data: {
                 websiteId: website.id,
                 validatorId,
+                region,
                 status,
                 nameLookup,
                 connection,
@@ -615,7 +686,14 @@ setInterval(async () => {
             await updateHistoricalData(tx, website.id);
           });
         }
-      };
-    });
+      } catch (error) {
+        console.error(
+          `Validation failed for ${website.url} in region ${region}:`,
+          error
+        );
+      } finally {
+        validatorManager.updateValidatorMetrics(validator.validatorId, false);
+      }
+    }
   }
 }, 60 * 1000);

@@ -57,15 +57,6 @@ RUN echo '#!/bin/sh' > start.sh && \
     echo '    exit 1' >> start.sh && \
     echo 'fi' >> start.sh && \
     echo '' >> start.sh && \
-    echo '# Validate Pusher environment variables' >> start.sh && \
-    echo 'if [ -z "$NEXT_PUBLIC_PUSHER_APP_ID" ] || \' >> start.sh && \
-    echo '   [ -z "$NEXT_PUBLIC_PUSHER_APP_KEY" ] || \' >> start.sh && \
-    echo '   [ -z "$NEXT_PUBLIC_PUSHER_APP_SECRET" ] || \' >> start.sh && \
-    echo '   [ -z "$NEXT_PUBLIC_PUSHER_APP_CLUSTER" ]; then' >> start.sh && \
-    echo '    echo "Error: Missing required Pusher environment variables"' >> start.sh && \
-    echo '    exit 1' >> start.sh && \
-    echo 'fi' >> start.sh && \
-    echo '' >> start.sh && \
     echo '# Start the application' >> start.sh && \
     echo 'exec bun ./dist/index.js' >> start.sh && \
     chmod +x start.sh && \

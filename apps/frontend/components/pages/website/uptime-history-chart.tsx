@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Calendar, ChevronDown, Download } from 'lucide-react';
+import { ChevronDown, Globe } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ProcessedWebsite } from '@/types/website';
-import { WebsiteStatus } from '@prisma/client';
+import { WebsiteStatus, Region } from '@prisma/client';
 import { startOfDay, subDays, format } from 'date-fns';
 
 interface UptimeHistoryChartProps {
@@ -27,6 +27,7 @@ interface UptimeHistoryChartProps {
 export function UptimeHistoryChart({ website }: UptimeHistoryChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [timeRange, setTimeRange] = useState('Last 7 days');
+  const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,9 +51,11 @@ export function UptimeHistoryChart({ website }: UptimeHistoryChartProps) {
             : 90;
 
     const startDate = subDays(startOfDay(new Date()), days);
-    const ticks = website.ticks.filter(
-      tick => new Date(tick.createdAt) >= startDate
-    );
+    const ticks = website.ticks
+      .filter(tick => new Date(tick.createdAt) >= startDate)
+      .filter(
+        tick => selectedRegion === 'all' || tick.region === selectedRegion
+      );
 
     // Group ticks by day and calculate uptime percentage
     const dailyUptime = new Array(days).fill(0).map((_, index) => {
@@ -213,7 +216,12 @@ export function UptimeHistoryChart({ website }: UptimeHistoryChartProps) {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [timeRange, website.ticks]);
+  }, [timeRange, website.ticks, selectedRegion]);
+
+  // Get unique regions from ticks
+  const availableRegions = Array.from(
+    new Set(website.ticks.map(tick => tick.region))
+  );
 
   return (
     <Card className="border-zinc-800 bg-zinc-950 min-h-[500px]">
@@ -225,6 +233,35 @@ export function UptimeHistoryChart({ website }: UptimeHistoryChartProps) {
           </CardDescription>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 border-zinc-800 bg-zinc-950 text-xs"
+              >
+                <Globe className="h-3.5 w-3.5" />
+                {selectedRegion === 'all' ? 'All Regions' : selectedRegion}
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="border-zinc-800 bg-zinc-950"
+            >
+              <DropdownMenuItem onClick={() => setSelectedRegion('all')}>
+                All Regions
+              </DropdownMenuItem>
+              {availableRegions.map(region => (
+                <DropdownMenuItem
+                  key={region}
+                  onClick={() => setSelectedRegion(region)}
+                >
+                  {region}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
