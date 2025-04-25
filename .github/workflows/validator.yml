@@ -76,16 +76,12 @@ jobs:
             
             # Create a temporary script with the commands
             CONTAINER_NAME="dpin-${{ env.SERVICE_NAME }}-$(echo $HOST | cut -d. -f1)"
+            IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}"
             
-            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$HOST bash -s << 'EOF'
-              # Pull latest image
-              docker pull ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
-              
-              # Stop existing container
-              docker stop ${CONTAINER_NAME} || true
-              docker rm ${CONTAINER_NAME} || true
-              
-              # Start new container
+            # Create deployment commands
+            DEPLOY_CMD="docker pull ${IMAGE_TAG} && \
+              docker stop ${CONTAINER_NAME} || true && \
+              docker rm ${CONTAINER_NAME} || true && \
               docker run -d \
                 --name ${CONTAINER_NAME} \
                 --restart unless-stopped \
@@ -93,11 +89,11 @@ jobs:
                 -e PRIVATE_KEY='${PRIVATE_KEY}' \
                 -e HUB_URL=${{ secrets.HUB_URL }} \
                 --init \
-                ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
-              
-              # Cleanup old images
-              docker image prune -f
-            EOF
+                ${IMAGE_TAG} && \
+              docker image prune -f"
+            
+            # Execute deployment commands
+            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$HOST "${DEPLOY_CMD}"
             
             # Check if deployment was successful
             if [ $? -eq 0 ]; then
