@@ -74,20 +74,23 @@ jobs:
               exit 1
             fi
             
-            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$HOST << 'EOF'
+            # Create a temporary script with the commands
+            CONTAINER_NAME="dpin-${{ env.SERVICE_NAME }}-$(echo $HOST | cut -d. -f1)"
+            
+            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$HOST bash -s << 'EOF'
               # Pull latest image
               docker pull ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
               
               # Stop existing container
-              docker stop dpin-${{ env.SERVICE_NAME }}-$(echo $HOST | cut -d. -f1) || true
-              docker rm dpin-${{ env.SERVICE_NAME }}-$(echo $HOST | cut -d. -f1) || true
+              docker stop ${CONTAINER_NAME} || true
+              docker rm ${CONTAINER_NAME} || true
               
-              # Start new container with unique name based on host
+              # Start new container
               docker run -d \
-                --name dpin-${{ env.SERVICE_NAME }}-$(echo $HOST | cut -d. -f1) \
+                --name ${CONTAINER_NAME} \
                 --restart unless-stopped \
                 --network dpin-network \
-                -e PRIVATE_KEY='$PRIVATE_KEY' \
+                -e PRIVATE_KEY='${PRIVATE_KEY}' \
                 -e HUB_URL=${{ secrets.HUB_URL }} \
                 --init \
                 ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
