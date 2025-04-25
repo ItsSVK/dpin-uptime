@@ -48,6 +48,7 @@ model Validator {
   longitude        Float
   ip               String
   region           Region
+  isActive         Boolean       @default(true)
   pendingPayouts   Int           @default(0)
   processingPayout Boolean       @default(false)
   createdAt        DateTime      @default(now())

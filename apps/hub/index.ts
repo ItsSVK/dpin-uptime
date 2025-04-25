@@ -44,6 +44,12 @@ Bun.serve({
         const validator = group.validators.find(v => v.socket === ws);
         if (validator) {
           validatorManager.removeValidator(validator.validatorId);
+          prismaClient.validator.update({
+            where: { id: validator.validatorId },
+            data: {
+              isActive: false,
+            },
+          });
           break;
         }
       }
@@ -106,6 +112,7 @@ async function signupHandler(
         latitude,
         longitude,
         region: mappedRegion,
+        isActive: true,
       },
     });
   }
