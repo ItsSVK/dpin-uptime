@@ -4,11 +4,12 @@ import { redirect } from 'next/navigation';
 import { ProcessedWebsite } from '@/types/website';
 import { WebsiteStatus } from '@prisma/client';
 import DashboardPage from '@/components/pages/DashboardPage';
-
+import { hasActiveValidators } from '@/actions/website';
 export default async function WebsitesPage() {
   const response = await getWebsites();
+  const hasActiveValidator = await hasActiveValidators();
 
-  if (!response.success || !response.data) {
+  if (!response.success || !response.data || !hasActiveValidator.success) {
     redirect('/');
   }
 
@@ -36,6 +37,7 @@ export default async function WebsitesPage() {
         ? websites.reduce((sum, site) => sum + (site.responseTime || 0), 0) /
             websites.filter(site => site.responseTime !== null).length || 0
         : 0,
+    hasActiveValidator: hasActiveValidator.data || false,
   };
 
   return <DashboardPage websites={websites} stats={stats} />;

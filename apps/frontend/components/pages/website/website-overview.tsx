@@ -46,16 +46,15 @@ export function WebsiteOverview({ website }: WebsiteOverviewProps) {
     {
       title: 'Current Status',
       value:
-        website.status === WebsiteStatus.ONLINE || WebsiteStatus.DEGRADED
-          ? 'Online'
+        website.status === WebsiteStatus.ONLINE ||
+        website.status === WebsiteStatus.DEGRADED
+          ? `Online`
           : (() => {
               switch (website.status) {
                 case WebsiteStatus.OFFLINE:
                   return 'Offline';
-                case WebsiteStatus.UNKNOWN:
-                  return 'Unknown';
                 default:
-                  return 'Unknown';
+                  return 'Checking...';
               }
             })(),
       icon: Globe,

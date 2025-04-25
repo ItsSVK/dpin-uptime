@@ -184,3 +184,24 @@ export async function deleteWebsite(ids: string[]): Promise<Response<void>> {
     };
   }
 }
+
+export async function hasActiveValidators(): Promise<Response<boolean>> {
+  try {
+    const validators = await prismaClient.validator.findMany({
+      where: {
+        isActive: true,
+      },
+    });
+
+    return {
+      success: true,
+      data: validators.length > 0,
+    };
+  } catch (error) {
+    console.error('Failed to check if there are active validators:', error);
+    return {
+      success: false,
+      message: 'Failed to check if there are active validators',
+    };
+  }
+}

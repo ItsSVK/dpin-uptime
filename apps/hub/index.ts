@@ -30,26 +30,35 @@ Bun.serve({
       const data: IncomingMessage = JSON.parse(message);
 
       if (data.type === MessageType.SIGNUP) {
+        console.log('Validator Connected: ', data.data.publicKey);
         handleSignupMessage(ws, data);
       } else if (data.type === MessageType.VALIDATE) {
         CALLBACKS[data.data.callbackId](data);
         delete CALLBACKS[data.data.callbackId];
       } else if (data.type === MessageType.HEARTBEAT) {
-        // do nothing
+        // Find validator by socket and update its heartbeat
+        for (const group of validatorManager.getAllValidators()) {
+          if (group.socket === ws) {
+            validatorManager.updateHeartbeat(group.validatorId);
+            break;
+          }
+        }
       }
     },
     close(ws: ServerWebSocket<unknown>) {
       // Find and remove the validator by socket
-      for (const group of validatorManager['validatorGroups'].values()) {
-        const validator = group.validators.find(v => v.socket === ws);
-        if (validator) {
+      for (const validator of validatorManager.getAllValidators()) {
+        if (validator.socket === ws) {
           validatorManager.removeValidator(validator.validatorId);
-          prismaClient.validator.update({
-            where: { id: validator.validatorId },
-            data: {
-              isActive: false,
-            },
-          });
+          console.log('Validator Disconnected: ', validator.publicKey);
+          (async () => {
+            await prismaClient.validator.update({
+              where: { id: validator.validatorId },
+              data: {
+                isActive: false,
+              },
+            });
+          })();
           break;
         }
       }
@@ -543,8 +552,8 @@ setInterval(async () => {
 
     const selections = validatorManager.selectValidators();
     let validatorsByRegion = Array.from(selections.entries())
-      .filter(([_, selection]) => selection !== null)
-      .map(([region, selection]) => ({ region, ...selection! }));
+      .filter(([_, validator]) => validator !== null)
+      .map(([region, validator]) => ({ region, validator: validator! }));
 
     if (validatorsByRegion.length === 0) {
       console.log(`No available validators for website ${website.url}`);

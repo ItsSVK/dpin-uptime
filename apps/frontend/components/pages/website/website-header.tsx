@@ -1,4 +1,4 @@
-import { Check, Clock, Globe, X } from 'lucide-react';
+import { Check, Clock, Globe, X, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProcessedWebsite } from '@/types/website';
@@ -26,18 +26,33 @@ export function WebsiteHeader({ website }: WebsiteHeaderProps) {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">{website.url}</h2>
-              {website.status === WebsiteStatus.ONLINE ||
-              website.status === WebsiteStatus.DEGRADED ? (
-                <Badge className="bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30">
-                  <Check className="mr-1 h-3 w-3" />
-                  Online
-                </Badge>
-              ) : (
-                <Badge className="bg-red-500/20 text-red-500 hover:bg-red-500/30">
-                  <X className="mr-1 h-3 w-3" />
-                  Offline
-                </Badge>
-              )}
+
+              {(() => {
+                switch (website.status) {
+                  case WebsiteStatus.ONLINE:
+                  case WebsiteStatus.DEGRADED:
+                    return (
+                      <Badge className="bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30">
+                        <Check className="mr-1 h-3 w-3" />
+                        Online
+                      </Badge>
+                    );
+                  case WebsiteStatus.OFFLINE:
+                    return (
+                      <Badge className="bg-red-500/20 text-red-500 hover:bg-red-500/30">
+                        <X className="mr-1 h-3 w-3" />
+                        Offline
+                      </Badge>
+                    );
+                  default:
+                    return (
+                      <Badge className="bg-zinc-500/20 text-zinc-500 hover:bg-zinc-500/30">
+                        <Circle className="mr-1 h-3 w-3" />
+                        Unknown
+                      </Badge>
+                    );
+                }
+              })()}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
               <div className="flex items-center gap-1">

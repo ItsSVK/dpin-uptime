@@ -1,27 +1,47 @@
 import { Region } from '@prisma/client';
-import {
-  ValidatorGroup,
-  ValidatorSelection,
-  ValidatorMetrics,
-} from '../types/validator';
+import type { ServerWebSocket } from 'bun';
+
+interface ValidatorMetrics {
+  validatorId: string;
+  socket: ServerWebSocket<unknown>;
+  publicKey: string;
+  lastHeartbeat?: number;
+  lastUsed: Date;
+  activeChecks: number;
+}
+
+interface ValidatorGroup {
+  validators: ValidatorMetrics[];
+  region: Region;
+}
 
 export class ValidatorManager {
-  private validatorGroups: Map<Region, ValidatorGroup> = new Map();
+  private validatorGroups: Map<Region, ValidatorGroup>;
+  private heartbeatTimeout: number = 30000; // 30 seconds timeout
+  private heartbeatInterval: number = 10000; // Check every 10 seconds
 
-  addValidator(
-    validatorMetrics: Omit<ValidatorMetrics, 'lastUsed' | 'activeChecks'>,
+  constructor() {
+    this.validatorGroups = new Map();
+    // Start heartbeat checker
+    setInterval(() => this.checkHeartbeats(), this.heartbeatInterval);
+  }
+
+  public addValidator(
+    validator: Omit<
+      ValidatorMetrics,
+      'lastUsed' | 'activeChecks' | 'lastHeartbeat'
+    >,
     region: Region
-  ) {
-    if (!this.validatorGroups.has(region)) {
-      this.validatorGroups.set(region, {
-        region,
-        validators: [],
-      });
+  ): void {
+    let group = this.validatorGroups.get(region);
+    if (!group) {
+      group = { validators: [], region };
+      this.validatorGroups.set(region, group);
     }
 
-    const group = this.validatorGroups.get(region)!;
     const newValidator: ValidatorMetrics = {
-      ...validatorMetrics,
+      ...validator,
+      lastHeartbeat: Date.now(),
       lastUsed: new Date(0),
       activeChecks: 0,
     };
@@ -29,23 +49,46 @@ export class ValidatorManager {
     group.validators.push(newValidator);
   }
 
-  removeValidator(validatorId: string) {
+  public removeValidator(validatorId: string): void {
     for (const group of this.validatorGroups.values()) {
       const index = group.validators.findIndex(
         v => v.validatorId === validatorId
       );
       if (index !== -1) {
         group.validators.splice(index, 1);
-        if (group.validators.length === 0) {
-          // Remove empty groups
-          for (const [key, value] of this.validatorGroups.entries()) {
-            if (value === group) {
-              this.validatorGroups.delete(key);
-              break;
-            }
-          }
-        }
         break;
+      }
+    }
+  }
+
+  public updateHeartbeat(validatorId: string): void {
+    for (const group of this.validatorGroups.values()) {
+      const validator = group.validators.find(
+        v => v.validatorId === validatorId
+      );
+      if (validator) {
+        validator.lastHeartbeat = Date.now();
+        break;
+      }
+    }
+  }
+
+  private checkHeartbeats(): void {
+    const now = Date.now();
+
+    for (const group of this.validatorGroups.values()) {
+      for (const validator of [...group.validators]) {
+        if (
+          !validator.lastHeartbeat ||
+          now - validator.lastHeartbeat > this.heartbeatTimeout
+        ) {
+          console.log(
+            `Validator ${validator.validatorId} timed out - no heartbeat received`
+          );
+          // Close the socket which will trigger the close handler
+          validator.socket.close();
+          this.removeValidator(validator.validatorId);
+        }
       }
     }
   }
@@ -61,8 +104,24 @@ export class ValidatorManager {
     })[0];
   }
 
-  selectValidators(): Map<Region, ValidatorSelection | null> {
-    const selections = new Map<Region, ValidatorSelection | null>();
+  public getValidatorForRegion(region: Region): ValidatorMetrics | null {
+    const group = this.validatorGroups.get(region);
+    if (!group || group.validators.length === 0) {
+      return null;
+    }
+    return this.selectFromGroup(group);
+  }
+
+  public getAllValidators(): ValidatorMetrics[] {
+    const allValidators: ValidatorMetrics[] = [];
+    for (const group of this.validatorGroups.values()) {
+      allValidators.push(...group.validators);
+    }
+    return allValidators;
+  }
+
+  selectValidators(): Map<Region, ValidatorMetrics | null> {
+    const selections = new Map<Region, ValidatorMetrics | null>();
 
     // Try to select a validator from each region
     for (const region of Object.values(Region)) {
@@ -72,9 +131,9 @@ export class ValidatorManager {
         continue;
       }
 
-      const validator = this.selectFromGroup(group);
+      const validator = this.getValidatorForRegion(region);
       if (validator) {
-        selections.set(region, { validator, group });
+        selections.set(region, validator);
       } else {
         selections.set(region, null);
       }
