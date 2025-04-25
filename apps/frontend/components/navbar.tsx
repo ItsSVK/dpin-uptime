@@ -67,10 +67,10 @@ export function Navbar() {
             Docs
           </Link>
           <Link
-            href="#"
+            href="/validator"
             className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
           >
-            Blog
+            Become a Validator
           </Link>
         </nav>
         <div className="flex items-center gap-4">
