@@ -89,7 +89,7 @@ export default function ValidatorSignupPage() {
         <CardContent className="space-y-4">
           <p className="text-zinc-300">
             Our reputation-based system rewards reliable validators. As you
-            build trust, you'll unlock higher tiers with better benefits.
+            build trust, you&apos;ll unlock higher tiers with better benefits.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
