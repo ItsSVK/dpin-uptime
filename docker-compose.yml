@@ -44,7 +44,7 @@ services:
       - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
       - NODE_ENV=development
     env_file:
-      - ./apps/hub/.env
+      - ./apps/hub/.env.local
     ports:
       - '8081:8081'
     networks:
@@ -70,7 +70,7 @@ services:
       - HUB_URL=ws://hub:8081
       - NODE_ENV=development
     env_file:
-      - ./apps/validator/.env
+      - ./apps/validator/.env.local
     networks:
       - dpin_network
     depends_on:
@@ -88,7 +88,7 @@ services:
       - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
       - NODE_ENV=development
     env_file:
-      - ./apps/poller/.env
+      - ./apps/poller/.env.local
     networks:
       - dpin_network
     depends_on:

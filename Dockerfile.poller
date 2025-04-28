@@ -9,7 +9,7 @@ RUN apt-get update && \
 
 # Copy package files
 COPY package*.json ./
-COPY bun.lock ./
+COPY bun.lockb ./
 COPY turbo.json ./
 COPY packages/ ./packages/
 COPY apps/poller/package.json ./apps/poller/package.json
