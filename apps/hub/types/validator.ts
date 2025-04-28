@@ -7,6 +7,7 @@ export interface ValidatorMetrics {
   publicKey: string;
   lastUsed: Date;
   activeChecks: number;
+  trustScore: number;
 }
 
 export interface ValidatorGroup {

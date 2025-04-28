@@ -54,6 +54,7 @@ model Validator {
   createdAt        DateTime      @default(now())
   ticks            WebsiteTick[]
   transactions     Transaction[]
+  trustScore       Int           @default(0)
 }
 
 model WebsiteTick {
@@ -137,8 +138,15 @@ enum UptimePeriod {
 }
 
 enum Region {
-  EUROPE
-  NORTH_AMERICA
-  ASIA
+  US_EAST
+  US_WEST
+  EUROPE_WEST
+  EUROPE_EAST
+  INDIA
+  JAPAN
+  SINGAPORE
   AUSTRALIA
+  BRAZIL
+  SOUTH_AFRICA
+  // Add more as needed
 }

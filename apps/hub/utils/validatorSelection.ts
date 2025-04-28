@@ -8,6 +8,7 @@ interface ValidatorMetrics {
   lastHeartbeat?: number;
   lastUsed: Date;
   activeChecks: number;
+  trustScore: number;
 }
 
 interface ValidatorGroup {
@@ -44,6 +45,7 @@ export class ValidatorManager {
       lastHeartbeat: Date.now(),
       lastUsed: new Date(0),
       activeChecks: 0,
+      trustScore: validator.trustScore ?? 0,
     };
 
     group.validators.push(newValidator);
@@ -169,5 +171,21 @@ export class ValidatorManager {
 
   getValidatorsInRegion(region: Region): number {
     return this.validatorGroups.get(region)?.validators.length || 0;
+  }
+
+  public selectMultipleValidators(
+    region: Region,
+    count: number
+  ): ValidatorMetrics[] {
+    const group = this.validatorGroups.get(region);
+    if (!group) return [];
+    return group.validators
+      .sort(
+        (a, b) =>
+          b.trustScore - a.trustScore ||
+          a.activeChecks - b.activeChecks ||
+          a.lastUsed.getTime() - b.lastUsed.getTime()
+      )
+      .slice(0, count);
   }
 }

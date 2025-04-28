@@ -2,37 +2,85 @@ import { Region } from '@prisma/client';
 
 // Regional coordinate boundaries (approximate)
 const REGION_BOUNDS = {
-  [Region.EUROPE]: {
-    minLat: 35,
+  [Region.US_EAST]: {
+    minLat: 24,
+    maxLat: 49,
+    minLng: -82,
+    maxLng: -66,
+    centerLat: 37,
+    centerLng: -77,
+  },
+  [Region.US_WEST]: {
+    minLat: 32,
+    maxLat: 49,
+    minLng: -125,
+    maxLng: -102,
+    centerLat: 41,
+    centerLng: -120,
+  },
+  [Region.EUROPE_WEST]: {
+    minLat: 36,
+    maxLat: 60,
+    minLng: -10,
+    maxLng: 10,
+    centerLat: 48,
+    centerLng: 2,
+  },
+  [Region.EUROPE_EAST]: {
+    minLat: 45,
     maxLat: 71,
-    minLng: -25,
+    minLng: 10,
     maxLng: 40,
-    centerLat: 54.5,
-    centerLng: 15.2,
+    centerLat: 55,
+    centerLng: 25,
   },
-  [Region.NORTH_AMERICA]: {
-    minLat: 15,
-    maxLat: 71,
-    minLng: -168,
-    maxLng: -50,
-    centerLat: 45.5,
-    centerLng: -101.2,
+  [Region.INDIA]: {
+    minLat: 8,
+    maxLat: 37,
+    minLng: 68,
+    maxLng: 97,
+    centerLat: 22,
+    centerLng: 78,
   },
-  [Region.ASIA]: {
-    minLat: -10,
-    maxLat: 63,
-    minLng: 40,
-    maxLng: 180,
-    centerLat: 34.0,
-    centerLng: 100.6,
+  [Region.JAPAN]: {
+    minLat: 24,
+    maxLat: 46,
+    minLng: 123,
+    maxLng: 146,
+    centerLat: 36,
+    centerLng: 138,
+  },
+  [Region.SINGAPORE]: {
+    minLat: 1,
+    maxLat: 2,
+    minLng: 103,
+    maxLng: 104,
+    centerLat: 1.35,
+    centerLng: 103.8,
   },
   [Region.AUSTRALIA]: {
-    minLat: -47,
+    minLat: -44,
     maxLat: -10,
-    minLng: 110,
-    maxLng: 180,
-    centerLat: -25.2,
-    centerLng: 133.7,
+    minLng: 113,
+    maxLng: 154,
+    centerLat: -25,
+    centerLng: 134,
+  },
+  [Region.BRAZIL]: {
+    minLat: -34,
+    maxLat: 5,
+    minLng: -74,
+    maxLng: -34,
+    centerLat: -14,
+    centerLng: -51,
+  },
+  [Region.SOUTH_AFRICA]: {
+    minLat: -35,
+    maxLat: -22,
+    minLng: 16,
+    maxLng: 33,
+    centerLat: -29,
+    centerLng: 24,
   },
 };
 
@@ -69,7 +117,7 @@ function findRegionByCoordinates(latitude: number, longitude: number): Region {
   }
 
   // If not in any bounds, find closest region center
-  let closestRegion: Region = Region.EUROPE;
+  let closestRegion: Region = Region.EUROPE_WEST;
   let minDistance = Infinity;
 
   for (const [region, bounds] of Object.entries(REGION_BOUNDS)) {
@@ -95,27 +143,58 @@ export function mapToRegion(
 ): Region {
   const normalized = regionStr.toLowerCase();
 
-  // Try string-based mapping first
-  if (normalized.includes('europe') || normalized.includes('eu')) {
-    return Region.EUROPE;
-  }
-  if (normalized.includes('asia')) {
-    return Region.ASIA;
+  if (
+    normalized.includes('us east') ||
+    normalized.includes('new york') ||
+    normalized.includes('virginia')
+  ) {
+    return Region.US_EAST;
   }
   if (
-    normalized.includes('america') ||
-    normalized.includes('us') ||
-    normalized.includes('canada')
+    normalized.includes('us west') ||
+    normalized.includes('california') ||
+    normalized.includes('oregon')
   ) {
-    return Region.NORTH_AMERICA;
+    return Region.US_WEST;
   }
-  if (normalized.includes('australia') || normalized.includes('oceania')) {
+  if (
+    normalized.includes('europe west') ||
+    normalized.includes('france') ||
+    normalized.includes('germany') ||
+    normalized.includes('uk')
+  ) {
+    return Region.EUROPE_WEST;
+  }
+  if (
+    normalized.includes('europe east') ||
+    normalized.includes('poland') ||
+    normalized.includes('ukraine') ||
+    normalized.includes('russia')
+  ) {
+    return Region.EUROPE_EAST;
+  }
+  if (normalized.includes('india')) {
+    return Region.INDIA;
+  }
+  if (normalized.includes('japan')) {
+    return Region.JAPAN;
+  }
+  if (normalized.includes('singapore')) {
+    return Region.SINGAPORE;
+  }
+  if (normalized.includes('australia')) {
     return Region.AUSTRALIA;
+  }
+  if (normalized.includes('brazil')) {
+    return Region.BRAZIL;
+  }
+  if (normalized.includes('south africa')) {
+    return Region.SOUTH_AFRICA;
   }
 
   // For development/localhost
   if (normalized === 'unknown' || normalized.includes('localhost')) {
-    return Region.EUROPE;
+    return Region.EUROPE_WEST;
   }
 
   // If coordinates are available, use them for mapping
@@ -126,7 +205,7 @@ export function mapToRegion(
   console.warn(
     `Unknown region "${regionStr}", defaulting to closest major region`
   );
-  return Region.EUROPE;
+  return Region.EUROPE_WEST;
 }
 
 export function isLocalhost(ip: string): boolean {
