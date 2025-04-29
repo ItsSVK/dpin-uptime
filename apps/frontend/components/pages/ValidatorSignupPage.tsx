@@ -90,14 +90,18 @@ export default function ValidatorSignupPage() {
           <p className="text-zinc-300">
             Our reputation-based system rewards reliable validators. As you
             build trust, you&apos;ll unlock higher tiers with better benefits.
+            Your tier is determined by your{' '}
+            <span className="text-emerald-400 font-semibold">trustScore</span>:
           </p>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-zinc-950 p-4 rounded-md">
               <h4 className="text-sm font-medium text-emerald-400 mb-2">
                 New Validator
               </h4>
               <ul className="space-y-1 text-sm text-zinc-400">
+                <li>
+                  • TrustScore: <span className="text-emerald-300">0 - 99</span>
+                </li>
                 <li>• Up to 50 checks/hour</li>
                 <li>• Base payment rate</li>
                 <li>• Basic monitoring</li>
@@ -108,8 +112,15 @@ export default function ValidatorSignupPage() {
                 Trusted Validator
               </h4>
               <ul className="space-y-1 text-sm text-zinc-400">
+                <li>
+                  • TrustScore:{' '}
+                  <span className="text-emerald-300">100 - 499</span>
+                </li>
                 <li>• Up to 200 checks/hour</li>
-                <li>• 20% bonus payments</li>
+                <li>
+                  • <span className="text-emerald-300">20% bonus</span> on
+                  payments
+                </li>
                 <li>• Priority assignments</li>
               </ul>
             </div>
@@ -118,13 +129,18 @@ export default function ValidatorSignupPage() {
                 Expert Validator
               </h4>
               <ul className="space-y-1 text-sm text-zinc-400">
+                <li>
+                  • TrustScore: <span className="text-emerald-300">500+</span>
+                </li>
                 <li>• Up to 500 checks/hour</li>
-                <li>• 50% bonus payments</li>
+                <li>
+                  • <span className="text-emerald-300">50% bonus</span> on
+                  payments
+                </li>
                 <li>• Premium assignments</li>
               </ul>
             </div>
           </div>
-
           <div className="bg-emerald-900/20 p-4 rounded-md border border-emerald-800">
             <h4 className="text-emerald-400 font-semibold mb-2">
               How to Level Up:
@@ -135,6 +151,19 @@ export default function ValidatorSignupPage() {
               <li>Complete regular validations</li>
               <li>Keep your validator software updated</li>
             </ul>
+          </div>
+          <div className="bg-zinc-950 p-4 rounded-md border border-emerald-800 mt-4">
+            <h4 className="text-emerald-400 font-semibold mb-2">
+              Low TrustScore?
+            </h4>
+            <p className="text-sm text-zinc-300">
+              If your trustScore drops below{' '}
+              <span className="text-emerald-300">-10</span>, you will be
+              temporarily excluded from most validation tasks. However,
+              you&apos;ll still occasionally receive recovery assignments,
+              giving you a chance to improve your trustScore and regain full
+              eligibility.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -234,15 +263,18 @@ export default function ValidatorSignupPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-zinc-300">
-            Validators earn SOL for each successful website validation. Rates
-            increase with your reputation level.
+            Validators earn SOL for each successful website validation. Your
+            earnings increase as your reputation grows:
           </p>
           <div className="bg-emerald-900/20 p-4 rounded-md border border-emerald-800">
             <p className="text-emerald-400 font-semibold">
               Base Rate: 0.000001 SOL per validation
             </p>
             <p className="text-sm text-emerald-500/80 mt-1">
-              Earn up to 50% more as an Expert Validator!
+              Trusted Validators earn{' '}
+              <span className="text-emerald-300">+20%</span> and Expert
+              Validators earn <span className="text-emerald-300">+50%</span> per
+              validation!
             </p>
           </div>
           <div className="bg-zinc-950 p-4 rounded-md mt-4">
@@ -251,8 +283,8 @@ export default function ValidatorSignupPage() {
             </h4>
             <ul className="list-disc list-inside space-y-1 text-sm text-zinc-400">
               <li>New Validator (50/hour): 0.036 SOL</li>
-              <li>Trusted Validator (200/hour): 0.172 SOL</li>
-              <li>Expert Validator (500/hour): 0.540 SOL</li>
+              <li>Trusted Validator (200/hour, 20% bonus): 0.172 SOL</li>
+              <li>Expert Validator (500/hour, 50% bonus): 0.540 SOL</li>
             </ul>
           </div>
         </CardContent>

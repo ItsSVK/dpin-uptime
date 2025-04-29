@@ -628,17 +628,20 @@ setInterval(async () => {
           console.error('Invalid signature from validator');
           continue;
         }
-        // Update trustScore in DB
+        // Tier and bonus logic
+        const tier = getValidatorTier(validator.trustScore);
+        const bonus = getTierBonus(tier);
+        const payout = COST_PER_VALIDATION * (1 + bonus);
+        // Update trustScore and pendingPayouts in DB
         await prismaClient.validator.update({
           where: { id: validator.validatorId },
           data: {
             trustScore: { increment: status === majorityStatus ? 1 : -1 },
-            pendingPayouts: { increment: COST_PER_VALIDATION },
+            pendingPayouts: { increment: payout },
           },
         });
         // Update in-memory trustScore
         validator.trustScore += status === majorityStatus ? 1 : -1;
-
         // Only one tick per validator per website per round
         await prismaClient.websiteTick.create({
           data: {
@@ -666,3 +669,16 @@ setInterval(async () => {
     }
   }
 }, 60 * 1000);
+
+// Tier and bonus logic
+function getValidatorTier(trustScore: number): 'New' | 'Trusted' | 'Expert' {
+  if (trustScore >= 500) return 'Expert';
+  if (trustScore >= 100) return 'Trusted';
+  return 'New';
+}
+
+function getTierBonus(tier: 'New' | 'Trusted' | 'Expert'): number {
+  if (tier === 'Expert') return 0.5;
+  if (tier === 'Trusted') return 0.2;
+  return 0;
+}

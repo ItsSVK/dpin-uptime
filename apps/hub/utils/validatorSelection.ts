@@ -9,6 +9,8 @@ interface ValidatorMetrics {
   lastUsed: Date;
   activeChecks: number;
   trustScore: number;
+  // Track per-hour assignment timestamps
+  assignmentTimestamps?: number[];
 }
 
 interface ValidatorGroup {
@@ -95,10 +97,52 @@ export class ValidatorManager {
     }
   }
 
-  private selectFromGroup(group: ValidatorGroup): ValidatorMetrics | null {
-    if (group.validators.length === 0) return null;
+  // Helper to get tier from trustScore
+  private getTier(trustScore: number): 'New' | 'Trusted' | 'Expert' {
+    if (trustScore >= 500) return 'Expert';
+    if (trustScore >= 100) return 'Trusted';
+    return 'New';
+  }
 
-    return group.validators.sort((a, b) => {
+  // Helper to get per-hour limit for a tier
+  private getHourlyLimit(tier: 'New' | 'Trusted' | 'Expert'): number {
+    if (tier === 'Expert') return 500;
+    if (tier === 'Trusted') return 200;
+    return 50;
+  }
+
+  // Helper to check if validator is under hourly limit
+  private isUnderHourlyLimit(validator: ValidatorMetrics): boolean {
+    const tier = this.getTier(validator.trustScore);
+    const limit = this.getHourlyLimit(tier);
+    const now = Date.now();
+    // Clean up timestamps older than 1 hour
+    if (!validator.assignmentTimestamps) validator.assignmentTimestamps = [];
+    validator.assignmentTimestamps = validator.assignmentTimestamps.filter(
+      ts => now - ts < 60 * 60 * 1000
+    );
+    return validator.assignmentTimestamps.length < limit;
+  }
+
+  // Call this when assigning a validation
+  private recordAssignment(validator: ValidatorMetrics) {
+    if (!validator.assignmentTimestamps) validator.assignmentTimestamps = [];
+    validator.assignmentTimestamps.push(Date.now());
+  }
+
+  private selectFromGroup(group: ValidatorGroup): ValidatorMetrics | null {
+    // Only consider validators under their hourly limit
+    const available = group.validators.filter(v => this.isUnderHourlyLimit(v));
+    if (available.length === 0) {
+      // Fallback: if all are over limit, pick the least recently used validator
+      if (group.validators.length > 0) {
+        return group.validators.sort(
+          (a, b) => a.lastUsed.getTime() - b.lastUsed.getTime()
+        )[0];
+      }
+      return null;
+    }
+    return available.sort((a, b) => {
       if (a.activeChecks !== b.activeChecks) {
         return a.activeChecks - b.activeChecks;
       }
@@ -111,7 +155,10 @@ export class ValidatorManager {
     if (!group || group.validators.length === 0) {
       return null;
     }
-    return this.selectFromGroup(group);
+    // Exclude low trustScore validators
+    const eligible = group.validators.filter(v => v.trustScore >= -10);
+    if (eligible.length === 0) return null;
+    return this.selectFromGroup({ ...group, validators: eligible });
   }
 
   public getAllValidators(): ValidatorMetrics[] {
@@ -179,7 +226,14 @@ export class ValidatorManager {
   ): ValidatorMetrics[] {
     const group = this.validatorGroups.get(region);
     if (!group) return [];
-    return group.validators
+    // Exclude low trustScore validators for main pool
+    const eligible = group.validators.filter(
+      v => v.trustScore >= -10 && this.isUnderHourlyLimit(v)
+    );
+    const lowTrust = group.validators.filter(
+      v => v.trustScore < -10 && this.isUnderHourlyLimit(v)
+    );
+    let selected = eligible
       .sort(
         (a, b) =>
           b.trustScore - a.trustScore ||
@@ -187,5 +241,21 @@ export class ValidatorManager {
           a.lastUsed.getTime() - b.lastUsed.getTime()
       )
       .slice(0, count);
+    // If not enough, add one low-trust validator for recovery
+    if (selected.length < count && lowTrust.length > 0) {
+      selected.push(lowTrust[0]);
+    }
+    // Fallback: if still not enough (e.g., all are over limit), pick least recently used validators
+    if (selected.length < count) {
+      const alreadySelectedIds = new Set(selected.map(v => v.validatorId));
+      const fallback = group.validators
+        .filter(v => !alreadySelectedIds.has(v.validatorId))
+        .sort((a, b) => a.lastUsed.getTime() - b.lastUsed.getTime())
+        .slice(0, count - selected.length);
+      selected = selected.concat(fallback);
+    }
+    // Record assignment for selected validators
+    selected.forEach(v => this.recordAssignment(v));
+    return selected;
   }
 }
