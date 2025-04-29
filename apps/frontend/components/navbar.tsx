@@ -9,6 +9,7 @@ import { clearAuthCookie } from '@/lib/auth';
 import { isCookieValid } from '@/lib/auth';
 import { useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { publicRoutes } from '@/lib/websiteUtils';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -30,7 +31,10 @@ export function Navbar() {
       const timeout = setTimeout(() => {
         if (!connected) {
           clearAuthCookie();
-          router.push('/');
+          if (!publicRoutes.includes(window.location.pathname)) {
+            console.log('Redirecting to sign in');
+            router.push('/');
+          }
         }
       }, 1500); // wait 1.5 seconds
 

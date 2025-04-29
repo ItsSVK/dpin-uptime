@@ -1,4 +1,4 @@
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useState } from 'react';
 import { WebsiteHelpModal } from './website-help-modal';
+import Link from 'next/link';
 
 export function WebsiteListHeader() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -24,10 +25,30 @@ export function WebsiteListHeader() {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
+              <Link href="/deposits">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1 border-zinc-800 bg-zinc-950 cursor-pointer"
+                >
+                  <Wallet className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Deposit</span>
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Add funds to keep your websites monitored</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1 border-zinc-800 bg-zinc-950"
+                className="h-8 gap-1 border-zinc-800 bg-zinc-950 cursor-pointer"
                 onClick={() => setIsHelpOpen(true)}
               >
                 <HelpCircle className="h-3.5 w-3.5" />

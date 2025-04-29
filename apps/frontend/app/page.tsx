@@ -1,7 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, ChevronRight, LucideWaves, ServerOff } from 'lucide-react';
+import {
+  Check,
+  ChevronRight,
+  LucideWaves,
+  ServerOff,
+  Gem,
+  Rocket,
+  Crown,
+  Wallet,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -34,6 +43,8 @@ export default function Home() {
     {
       name: 'Basic',
       price: '$9',
+      icon: Gem,
+      accent: 'text-emerald-400',
       description: 'Perfect for small websites and personal projects',
       features: [
         '5 websites',
@@ -45,6 +56,8 @@ export default function Home() {
     {
       name: 'Pro',
       price: '$29',
+      icon: Rocket,
+      accent: 'text-emerald-500',
       description: 'Ideal for growing businesses with multiple sites',
       features: [
         '25 websites',
@@ -57,6 +70,8 @@ export default function Home() {
     {
       name: 'Enterprise',
       price: '$99',
+      icon: Crown,
+      accent: 'text-yellow-400',
       description: 'Complete solution for large organizations',
       features: [
         'Unlimited websites',
@@ -228,53 +243,64 @@ export default function Home() {
                 Simple, transparent pricing
               </h2>
               <p className="max-w-[85%] text-zinc-400 md:text-xl/relaxed">
-                Choose the plan that fits your monitoring needs
+                Only pay for what you use. No monthly fees, no hidden costs.
               </p>
             </div>
-            <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-3">
-              {pricingTiers.map((tier, index) => (
-                <Card
-                  key={index}
-                  className="relative overflow-hidden bg-zinc-900 border-zinc-800"
-                >
-                  {tier.name === 'Pro' && (
-                    <div className="absolute right-0 top-0 translate-x-2 -translate-y-2 rotate-12 bg-emerald-600 px-3 py-1 text-xs font-medium">
-                      Popular
-                    </div>
-                  )}
-                  <CardHeader>
-                    <CardTitle>{tier.name}</CardTitle>
-                    <div className="mt-4 flex items-baseline text-5xl font-bold">
-                      {tier.price}
-                      <span className="ml-1 text-lg font-normal text-zinc-400">
-                        /month
-                      </span>
-                    </div>
-                    <CardDescription className="mt-4 text-zinc-400">
-                      {tier.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="mt-2">
-                    <ul className="space-y-3">
-                      {tier.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-emerald-500" />
-                          <span className="text-sm text-zinc-300">
-                            {feature}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      className={`w-full ${tier.name === 'Pro' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
-                    >
-                      Get started
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+            <div className="mx-auto mt-16 max-w-2xl">
+              <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+                <CardHeader className="items-center">
+                  <CardTitle className="flex items-center gap-2 text-2xl font-bold text-emerald-400">
+                    <Wallet className="h-7 w-7 text-emerald-500" />
+                    Pay-as-you-go Wallet
+                  </CardTitle>
+                  <CardDescription className="mt-2 text-zinc-400 text-center">
+                    Deposit SOL to your account and only pay for the monitoring
+                    you use.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 mt-2">
+                  <ul className="list-disc list-inside space-y-2 text-zinc-300 text-base">
+                    <li>
+                      <span className="font-semibold text-emerald-400">
+                        0.000001 SOL
+                      </span>{' '}
+                      + platform fee per website check
+                    </li>
+                    <li>
+                      <span className="font-semibold text-emerald-400">
+                        No monthly subscription
+                      </span>{' '}
+                      — deposit any amount, anytime
+                    </li>
+                    <li>
+                      Monitoring{' '}
+                      <span className="font-semibold text-emerald-400">
+                        pauses automatically
+                      </span>{' '}
+                      if your balance drops below{' '}
+                      <span className="font-semibold">0.1 SOL</span>
+                    </li>
+                    <li>Instantly resume by topping up your balance</li>
+                  </ul>
+                  <div className="bg-zinc-950 p-4 rounded-md border border-zinc-800 mt-4 text-zinc-400 text-sm">
+                    <span className="font-semibold text-emerald-400">
+                      Example:
+                    </span>{' '}
+                    Monitoring 5 websites every 60 seconds for a month costs
+                    less than <span className="font-semibold">0.022 SOL</span>.
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    asChild
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold"
+                  >
+                    <Link href="/deposits">
+                      Deposit SOL &amp; Start Monitoring
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
             </div>
           </div>
         </section>

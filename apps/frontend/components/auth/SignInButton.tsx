@@ -14,6 +14,7 @@ import {
   setAuthCookie,
   signJWT,
 } from '@/lib/auth';
+import { publicRoutes } from '@/lib/websiteUtils';
 
 export function SignInButton() {
   return (
@@ -50,7 +51,10 @@ function SignInButtonContent() {
       const timeout = setTimeout(() => {
         if (!connected) {
           clearAuthCookie();
-          router.push('/');
+          if (!publicRoutes.includes(window.location.pathname)) {
+            console.log('Redirecting to sign in');
+            router.push('/');
+          }
         }
       }, 1500); // wait 1.5 seconds
 

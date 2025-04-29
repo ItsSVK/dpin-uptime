@@ -86,3 +86,5 @@ export function timeSince(date: Date): string {
   if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
   return Math.floor(seconds / 86400) + ' days ago';
 }
+
+export const publicRoutes = ['/sign', '/', '/payout'];
