@@ -1,4 +1,4 @@
-import { HelpCircle, Plus, Wallet } from 'lucide-react';
+import { HelpCircle, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -35,7 +35,13 @@ export function WebsiteListHeader({ balance }: { balance: number }) {
                   >
                     <Wallet className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Deposit |</span>
-                    <span className="text-sm font-medium text-emerald-400">
+                    <span
+                      className={`text-sm font-medium ${
+                        balance < 0.1 * LAMPORTS_PER_SOL
+                          ? 'text-red-500'
+                          : 'text-emerald-500'
+                      }`}
+                    >
                       {(balance / LAMPORTS_PER_SOL).toFixed(9)} SOL{' '}
                     </span>
                   </Button>

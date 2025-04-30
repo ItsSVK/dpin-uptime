@@ -18,7 +18,7 @@
     "paths": {
       "@/*": ["./*"],
       "@common/*": ["../../packages/common/src/*"],
-      "@db/*": ["../../packages/db/src/*"]
+      "@db/*": ["../../packages/db/prisma/migrations/src/*"]
     },
     "baseUrl": "."
   },

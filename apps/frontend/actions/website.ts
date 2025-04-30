@@ -1,7 +1,7 @@
 'use server';
 
 import { Website, WebsiteTick } from '@/types/website';
-import { prismaClient } from 'db/client';
+import { prismaClient } from '../../../packages/db/prisma/migrations/src';
 import { formatUrl } from '@/lib/url';
 import { getUserFromJWT } from '@/lib/auth';
 import { WebsiteStatus } from '@prisma/client';
@@ -131,6 +131,21 @@ export async function updateWebsite(
     return {
       success: false,
       message: 'Unauthorized',
+    };
+  }
+
+  const userBalance = await getUserBalance();
+  if (!userBalance.success) {
+    return {
+      success: false,
+      message: 'Unauthorized',
+    };
+  }
+
+  if (userBalance.balance && userBalance.balance < 0.1 * LAMPORTS_PER_SOL) {
+    return {
+      success: false,
+      message: 'Add more SOL to your balance to continue monitoring',
     };
   }
 

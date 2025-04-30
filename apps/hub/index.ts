@@ -12,12 +12,14 @@ import { WebsiteStatus, Prisma, UptimePeriod } from '@prisma/client';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { ValidatorManager } from './utils/validatorSelection';
 import { mapToRegion, isLocalhost } from './utils/region';
-import { prismaClient } from 'db/client';
+import { prismaClient } from '../../packages/db/prisma/migrations/src';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 const validatorManager = new ValidatorManager();
 const CALLBACKS: { [callbackId: string]: (data: IncomingMessage) => void } = {};
 const COST_PER_VALIDATION = 100; // in lamports
 const VALIDATION_TIMEOUT = 10000; // 10 seconds
+const PLATFORM_FEE_PERCENT = 0.1; // 10% platform fee
 
 Bun.serve({
   fetch(req, server) {
@@ -505,15 +507,31 @@ async function handleSignupMessage(
 }
 
 setInterval(async () => {
-  const websitesToMonitor = await prismaClient.website.findMany({
+  const websitesToMonitorAll = await prismaClient.website.findMany({
     where: {
       isPaused: false,
+    },
+    include: {
+      user: true,
     },
   });
 
   if (validatorManager.getActiveValidatorsCount() === 0) {
     return;
   }
+
+  // filter out websites that are paused due to low balance
+  const websitesToMonitor = websitesToMonitorAll.filter(
+    website => website.user.currentBalance > 0.1 * LAMPORTS_PER_SOL
+  );
+
+  // make those websites paused which are not in the websitesToMonitor
+  await prismaClient.website.updateMany({
+    where: {
+      id: { notIn: websitesToMonitor.map(website => website.id) },
+    },
+    data: { isPaused: true },
+  });
 
   const websiteByFrequency = await Promise.all(
     websitesToMonitor.map(async website => {
@@ -599,7 +617,13 @@ setInterval(async () => {
         )
         .pop();
 
-      // Update trustScore for each validator
+      // Calculate payouts and total cost
+      let totalValidatorPayout = 0;
+      const validatorPayouts: {
+        validatorId: string;
+        payout: number;
+        tier: string;
+      }[] = [];
       for (const { result, callbackId, validator } of results) {
         const { error, total, signedMessage } = result.data;
         const status = error
@@ -620,36 +644,95 @@ setInterval(async () => {
         const tier = getValidatorTier(validator.trustScore);
         const bonus = getTierBonus(tier);
         const payout = COST_PER_VALIDATION * (1 + bonus);
-        // Update trustScore and pendingPayouts in DB
-        await prismaClient.validator.update({
-          where: { id: validator.validatorId },
-          data: {
-            trustScore: { increment: status === majorityStatus ? 1 : -1 },
-            pendingPayouts: { increment: payout },
-          },
-        });
-        // Update in-memory trustScore
-        validator.trustScore += status === majorityStatus ? 1 : -1;
-        // Only one tick per validator per website per round
-        await prismaClient.websiteTick.create({
-          data: {
-            websiteId: website.id,
-            validatorId: validator.validatorId,
-            region,
-            status,
-            nameLookup: result.data.nameLookup,
-            connection: result.data.connection,
-            tlsHandshake: result.data.tlsHandshake,
-            dataTransfer: result.data.dataTransfer,
-            ttfb: result.data.ttfb,
-            total: result.data.total,
-            error: result.data.error,
-            createdAt: new Date(),
-          },
+        totalValidatorPayout += payout;
+        validatorPayouts.push({
+          validatorId: validator.validatorId,
+          payout,
+          tier,
         });
       }
-      // Optionally, update website status/uptime/average using majority result
-      // ... (existing logic can be adapted here)
+      const platformFee = totalValidatorPayout * PLATFORM_FEE_PERCENT;
+      const totalCost = totalValidatorPayout + platformFee;
+
+      // Deduct from user and add to validators in a transaction
+      await prismaClient.$transaction(async tx => {
+        // Deduct from user
+        await tx.user.update({
+          where: { id: website.userId },
+          data: { currentBalance: { decrement: totalCost } },
+        });
+        // Log user transaction
+        // await tx.transaction.create({
+        //   data: {
+        //     signature: randomUUIDv7(),
+        //     transactionType: 'PAYOUT',
+        //     status: 'Success',
+        //     userId: website.userId,
+        //     amount: BigInt(Math.round(totalCost)),
+        //     instructionData: {
+        //       websiteId: website.id,
+        //       platformFee,
+        //       validatorPayouts,
+        //     },
+        //   },
+        // });
+        // Add payout to each validator and log transaction
+        for (const { validatorId, payout, tier } of validatorPayouts) {
+          await tx.validator.update({
+            where: { id: validatorId },
+            data: { pendingPayouts: { increment: payout } },
+          });
+          // await tx.transaction.create({
+          //   data: {
+          //     signature: randomUUIDv7(),
+          //     transactionType: 'PAYOUT',
+          //     status: 'Success',
+          //     validatorId,
+          //     amount: BigInt(Math.round(payout)),
+          //     instructionData: { websiteId: website.id, tier },
+          //   },
+          // });
+        }
+        // Update trustScore and create WebsiteTick for each validator
+        for (const { result, callbackId, validator } of results) {
+          const { error, total, signedMessage } = result.data;
+          const status = error
+            ? WebsiteStatus.OFFLINE
+            : total > 1000
+              ? WebsiteStatus.DEGRADED
+              : WebsiteStatus.ONLINE;
+          const verified = verifySignature(
+            REPLY_MESSAGE(callbackId),
+            signedMessage,
+            validator.publicKey
+          );
+          if (!verified) continue;
+          await tx.validator.update({
+            where: { id: validator.validatorId },
+            data: {
+              trustScore: { increment: status === majorityStatus ? 1 : -1 },
+            },
+          });
+          validator.trustScore += status === majorityStatus ? 1 : -1;
+          await tx.websiteTick.create({
+            data: {
+              websiteId: website.id,
+              validatorId: validator.validatorId,
+              region,
+              status,
+              nameLookup: result.data.nameLookup,
+              connection: result.data.connection,
+              tlsHandshake: result.data.tlsHandshake,
+              dataTransfer: result.data.dataTransfer,
+              ttfb: result.data.ttfb,
+              total: result.data.total,
+              error: result.data.error,
+              createdAt: new Date(),
+            },
+          });
+        }
+      });
+
       // Update validator metrics (activeChecks)
       for (const validator of validators) {
         validatorManager.updateValidatorMetrics(validator.validatorId, false);

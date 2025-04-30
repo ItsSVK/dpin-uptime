@@ -1,5 +1,5 @@
 'use server';
-import { prismaClient } from 'db/client';
+import { prismaClient } from '../../../packages/db/prisma/migrations/src';
 import { SIGNINMESSAGE, verifySignature } from 'common';
 import { User } from '@prisma/client';
 

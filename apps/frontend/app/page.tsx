@@ -6,9 +6,6 @@ import {
   ChevronRight,
   LucideWaves,
   ServerOff,
-  Gem,
-  Rocket,
-  Crown,
   Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,51 +34,6 @@ export default function Home() {
     'Custom alert thresholds',
     'Scheduled reporting',
     'API integration',
-  ];
-
-  const pricingTiers = [
-    {
-      name: 'Basic',
-      price: '$9',
-      icon: Gem,
-      accent: 'text-emerald-400',
-      description: 'Perfect for small websites and personal projects',
-      features: [
-        '5 websites',
-        '60-second checks',
-        'Email alerts',
-        '24-hour data retention',
-      ],
-    },
-    {
-      name: 'Pro',
-      price: '$29',
-      icon: Rocket,
-      accent: 'text-emerald-500',
-      description: 'Ideal for growing businesses with multiple sites',
-      features: [
-        '25 websites',
-        '30-second checks',
-        'SMS & Email alerts',
-        '30-day data retention',
-        'API access',
-      ],
-    },
-    {
-      name: 'Enterprise',
-      price: '$99',
-      icon: Crown,
-      accent: 'text-yellow-400',
-      description: 'Complete solution for large organizations',
-      features: [
-        'Unlimited websites',
-        '10-second checks',
-        'Multi-channel alerts',
-        '90-day data retention',
-        'Priority support',
-        'Custom integrations',
-      ],
-    },
   ];
 
   return (
