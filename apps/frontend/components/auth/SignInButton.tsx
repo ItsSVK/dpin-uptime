@@ -15,6 +15,8 @@ import {
   signJWT,
 } from '@/lib/auth';
 import { publicRoutes } from '@/lib/websiteUtils';
+import { SIGNINMESSAGE } from 'common';
+import { verifySignatureAndUpsertUser } from '@/actions/auth';
 
 export function SignInButton() {
   return (
@@ -73,14 +75,24 @@ function SignInButtonContent() {
 
     try {
       setSigning(true);
-      const messageStr = `Sign in to DPIN Uptime Monitor\nWallet: ${publicKey.toString()}`;
+      const messageStr = SIGNINMESSAGE(publicKey.toBase58());
       const message = new TextEncoder().encode(messageStr);
 
       const signature = await signMessage(message);
       const signatureBase58 = bs58.encode(signature);
 
+      const user = await verifySignatureAndUpsertUser(
+        signatureBase58,
+        publicKey.toBase58()
+      );
+
+      if (!user) {
+        throw new Error('Invalid signature');
+      }
+
       const token = await signJWT({
-        walletAddress: publicKey.toString(),
+        userId: user.id,
+        walletAddress: publicKey.toBase58(),
         signature: signatureBase58,
       });
 

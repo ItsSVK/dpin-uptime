@@ -1,17 +1,15 @@
 'use server';
 
 import { prismaClient } from 'db/client';
-import { Validator } from '@prisma/client';
+import { TransactionType, Validator } from '@prisma/client';
 import {
-  Cluster,
-  clusterApiUrl,
-  Connection,
   Keypair,
   PublicKey,
   SystemProgram,
   Transaction,
 } from '@solana/web3.js';
 import { sendAndConfirmTransaction } from '@solana/web3.js';
+import { connection } from 'common';
 
 export async function getPayout(publicKey: string): Promise<{
   success: boolean;
@@ -88,10 +86,6 @@ export async function claimPayout(address: string) {
       };
     }
 
-    const connection = new Connection(
-      clusterApiUrl(process.env.NEXT_PUBLIC_SOLANA_NETWORK as Cluster)
-    );
-
     const { publicKey, secretKey } = Keypair.fromSecretKey(
       Uint8Array.from(JSON.parse(process.env.SOLANA_KEYPAIR!))
     );
@@ -113,7 +107,7 @@ export async function claimPayout(address: string) {
     await prismaClient.$transaction(async tx => {
       await tx.validator.update({
         where: { id },
-        data: { pendingPayouts: 0, processingPayout: true },
+        data: { processingPayout: true },
       });
 
       await tx.transaction.create({
@@ -121,6 +115,7 @@ export async function claimPayout(address: string) {
           validatorId: id,
           amount: payout.pendingPayouts,
           signature,
+          transactionType: TransactionType.PAYOUT,
           instructionData: {
             fromPubkey: publicKey.toBase58(),
             toPubkey: new PublicKey(payout.publicKey).toBase58(),
@@ -134,7 +129,7 @@ export async function claimPayout(address: string) {
       success: true,
       message: `Payout of ${(payout.pendingPayouts / 10 ** 9).toFixed(
         9
-      )} SOL sent to ${payout.publicKey}`,
+      )} SOL sent to ${payout.publicKey}, will reflect once the transaction is finalized`,
       signature,
     };
   } catch (error) {

@@ -1,3 +1,6 @@
+export * from './auth';
+export * from './connection';
+
 export interface SignupIncomingMessage {
   publicKey: string;
   signedMessage: string;
@@ -69,3 +72,14 @@ export type OutgoingMessage =
       type: MessageType.VALIDATE;
       data: ValidateOutgoingMessage;
     };
+
+export const SIGNINMESSAGE = (publicKey: string) =>
+  `Sign in to DPIN Uptime Monitor\nWallet: ${publicKey}`;
+
+export const VALIDATE_SIGNUP_MESSAGE = (
+  callbackId: string,
+  publicKey: string
+) => `Signed message for ${callbackId}, ${publicKey}`;
+
+export const REPLY_MESSAGE = (callbackId: string) =>
+  `Replying to ${callbackId}`;

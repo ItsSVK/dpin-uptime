@@ -1,3 +1,4 @@
+import { prismaClient } from 'db/client';
 import { Region } from '@prisma/client';
 import type { ServerWebSocket } from 'bun';
 
@@ -92,6 +93,14 @@ export class ValidatorManager {
           // Close the socket which will trigger the close handler
           validator.socket.close();
           this.removeValidator(validator.validatorId);
+          (async () => {
+            await prismaClient.validator.update({
+              where: { id: validator.validatorId },
+              data: {
+                isActive: false,
+              },
+            });
+          })();
         }
       }
     }

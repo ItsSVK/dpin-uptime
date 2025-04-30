@@ -8,6 +8,7 @@ const COOKIE_NAME = process.env.COOKIE_NAME || 'auth-token';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export interface AuthPayload {
+  userId: string;
   walletAddress: string;
   signature: string;
 }

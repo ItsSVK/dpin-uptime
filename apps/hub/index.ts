@@ -1,16 +1,18 @@
 import { randomUUIDv7, type ServerWebSocket } from 'bun';
-import type { IncomingMessage, SignupIncomingMessage } from 'common/types';
-import { MessageType } from 'common/types';
-import { prismaClient } from 'db/client';
-import { PublicKey } from '@solana/web3.js';
-import nacl from 'tweetnacl';
-import nacl_util from 'tweetnacl-util';
+import type { IncomingMessage, SignupIncomingMessage } from 'common';
+import {
+  MessageType,
+  REPLY_MESSAGE,
+  VALIDATE_SIGNUP_MESSAGE,
+  verifySignature,
+} from 'common';
 import { Region } from '@prisma/client';
 import type { Validator } from '@prisma/client';
 import { WebsiteStatus, Prisma, UptimePeriod } from '@prisma/client';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { ValidatorManager } from './utils/validatorSelection';
 import { mapToRegion, isLocalhost } from './utils/region';
+import { prismaClient } from 'db/client';
 
 const validatorManager = new ValidatorManager();
 const CALLBACKS: { [callbackId: string]: (data: IncomingMessage) => void } = {};
@@ -155,21 +157,6 @@ async function addSeconds(date: Date | null, seconds: number): Promise<Date> {
     return new Date();
   }
   return new Date(date.getTime() + seconds * 1000);
-}
-
-async function verifyMessage(
-  message: string,
-  publicKey: string,
-  signature: string
-) {
-  const messageBytes = nacl_util.decodeUTF8(message);
-  const result = nacl.sign.detached.verify(
-    messageBytes,
-    new Uint8Array(JSON.parse(signature)),
-    new PublicKey(publicKey).toBytes()
-  );
-
-  return result;
 }
 
 async function getGeoData(ip: string) {
@@ -494,11 +481,12 @@ async function handleSignupMessage(
 ) {
   if (data.type !== MessageType.SIGNUP) return;
 
-  const verified = await verifyMessage(
-    `Signed message for ${data.data.callbackId}, ${data.data.publicKey}`,
-    data.data.publicKey,
-    data.data.signedMessage
+  const verified = verifySignature(
+    VALIDATE_SIGNUP_MESSAGE(data.data.callbackId, data.data.publicKey),
+    data.data.signedMessage,
+    data.data.publicKey
   );
+
   if (verified) {
     const geoData = await getGeoData(ws.remoteAddress || '0.0.0.0');
 
@@ -619,10 +607,10 @@ setInterval(async () => {
           : total > 1000
             ? WebsiteStatus.DEGRADED
             : WebsiteStatus.ONLINE;
-        const verified = await verifyMessage(
-          `Replying to ${callbackId}`,
-          validator.publicKey,
-          signedMessage
+        const verified = verifySignature(
+          REPLY_MESSAGE(callbackId),
+          signedMessage,
+          validator.publicKey
         );
         if (!verified) {
           console.error('Invalid signature from validator');

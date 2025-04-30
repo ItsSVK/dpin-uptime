@@ -1,20 +1,15 @@
 import {
-  Connection,
   Keypair,
   PublicKey,
   sendAndConfirmTransaction,
   SystemProgram,
   Transaction,
-  clusterApiUrl,
-  type Cluster,
 } from '@solana/web3.js';
 import { prismaClient } from 'db/client';
-import { TransactionStatus } from '@prisma/client';
-
+import { TransactionStatus, TransactionType } from '@prisma/client';
+import { connection } from 'common';
 // Configuration
-const connection = new Connection(
-  clusterApiUrl((process.env.NEXT_PUBLIC_SOLANA_NETWORK as Cluster) || 'devnet')
-);
+
 const maxRetries = 3;
 const pollingInterval = 5000;
 const transactionTimeout = 1000 * 60 * 5; // 5 minutes
@@ -91,13 +86,14 @@ const recoverStuckTransactions = async () => {
           },
         });
 
-        await prisma.validator.update({
-          where: { id: tx.validatorId },
-          data: {
-            processingPayout: false,
-            pendingPayouts: { increment: Number(tx.amount) },
-          },
-        });
+        if (tx.transactionType === TransactionType.PAYOUT) {
+          await prisma.validator.update({
+            where: { id: tx.validatorId! },
+            data: {
+              processingPayout: false,
+            },
+          });
+        }
       });
 
       console.log(`🔄 Recovered stuck transaction ${tx.id}`);
@@ -159,13 +155,14 @@ const pollPendingTransactions = async () => {
                 lastCheckedAt: new Date(),
               },
             });
-            await tx.validator.update({
-              where: { id: txn.validatorId },
-              data: {
-                processingPayout: false,
-                pendingPayouts: { increment: Number(txn.amount) },
-              },
-            });
+            if (txn.transactionType === TransactionType.PAYOUT) {
+              await tx.validator.update({
+                where: { id: txn.validatorId! },
+                data: {
+                  processingPayout: false,
+                },
+              });
+            }
           });
           console.warn(`⏰ Transaction ${txn.signature} timed out.`);
           continue;
@@ -187,18 +184,30 @@ const pollPendingTransactions = async () => {
                 lastCheckedAt: new Date(),
               },
             });
-            await tx.validator.update({
-              where: { id: txn.validatorId },
-              data: {
-                processingPayout: false,
-              },
-            });
+            if (txn.transactionType === TransactionType.PAYOUT) {
+              await tx.validator.update({
+                where: { id: txn.validatorId! },
+                data: {
+                  processingPayout: false,
+                  pendingPayouts: { decrement: Number(txn.amount) },
+                },
+              });
+            }
+            if (txn.transactionType === TransactionType.DEPOSIT) {
+              await tx.user.update({
+                where: { id: txn.userId! },
+                data: {
+                  currentBalance: { increment: Number(txn.amount) },
+                },
+              });
+            }
           });
           console.log(`✅ Transaction ${txn.signature} succeeded.`);
         } else {
+          if (txn.transactionType === TransactionType.DEPOSIT) continue;
           // Transaction failed - handle retry logic
           if (txn.retryCount >= maxRetries) {
-            // Max retries reached - mark as failed and return funds to pending
+            // Max retries reached - mark as failed
             await prismaClient.$transaction(async tx => {
               await tx.transaction.update({
                 where: { id: txn.id },
@@ -207,13 +216,14 @@ const pollPendingTransactions = async () => {
                   lastCheckedAt: new Date(),
                 },
               });
-              await tx.validator.update({
-                where: { id: txn.validatorId },
-                data: {
-                  processingPayout: false,
-                  pendingPayouts: { increment: Number(txn.amount) },
-                },
-              });
+              if (txn.transactionType === TransactionType.PAYOUT) {
+                await tx.validator.update({
+                  where: { id: txn.validatorId! },
+                  data: {
+                    processingPayout: false,
+                  },
+                });
+              }
             });
             console.warn(
               `❌ Transaction ${txn.signature} failed after max retries.`
@@ -231,7 +241,7 @@ const pollPendingTransactions = async () => {
               const transaction = new Transaction().add(
                 SystemProgram.transfer({
                   fromPubkey: publicKey,
-                  toPubkey: new PublicKey(txn.validator.publicKey),
+                  toPubkey: new PublicKey(txn.validator?.publicKey || ''),
                   lamports: txn.amount,
                 })
               );
@@ -251,12 +261,13 @@ const pollPendingTransactions = async () => {
               await prismaClient.transaction.create({
                 data: {
                   validatorId: txn.validatorId,
+                  transactionType: TransactionType.PAYOUT,
                   amount: txn.amount,
                   signature: newSignature,
                   retryCount: txn.retryCount + 1,
                   instructionData: {
                     fromPubkey: publicKey.toBase58(),
-                    toPubkey: txn.validator.publicKey,
+                    toPubkey: txn.validator?.publicKey || null,
                     lamports: Number(txn.amount),
                   },
                 },
@@ -278,7 +289,7 @@ const pollPendingTransactions = async () => {
               );
             } catch (retryError) {
               console.error('Error during retry:', retryError);
-              // If retry fails immediately, mark as failed and return to pending
+              // If retry fails immediately, mark as failed
               await prismaClient.$transaction(async tx => {
                 await tx.transaction.update({
                   where: { id: txn.id },
@@ -287,13 +298,14 @@ const pollPendingTransactions = async () => {
                     lastCheckedAt: new Date(),
                   },
                 });
-                await tx.validator.update({
-                  where: { id: txn.validatorId },
-                  data: {
-                    processingPayout: false,
-                    pendingPayouts: { increment: Number(txn.amount) },
-                  },
-                });
+                if (txn.transactionType === TransactionType.PAYOUT) {
+                  await tx.validator.update({
+                    where: { id: txn.validatorId! },
+                    data: {
+                      processingPayout: false,
+                    },
+                  });
+                }
               });
             }
           }

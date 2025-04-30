@@ -3,8 +3,8 @@ import type {
   OutgoingMessage,
   SignupOutgoingMessage,
   ValidateOutgoingMessage,
-} from 'common/types';
-import { MessageType } from 'common/types';
+} from 'common';
+import { MessageType, REPLY_MESSAGE, VALIDATE_SIGNUP_MESSAGE } from 'common';
 import { Keypair } from '@solana/web3.js';
 import nacl from 'tweetnacl';
 import nacl_util from 'tweetnacl-util';
@@ -30,7 +30,7 @@ async function main() {
     };
 
     const signedMessage = await signMessage(
-      `Signed message for ${callbackId}, ${keypair.publicKey}`,
+      VALIDATE_SIGNUP_MESSAGE(callbackId, keypair.publicKey.toBase58()),
       keypair
     );
 
@@ -68,7 +68,7 @@ async function main() {
   // This code sends a heartbeat message to the websocket server every 10 seconds
   // to keep the connection alive and let the server know the validator is still running
   setInterval(async () => {
-    console.log('Sending heartbeat');
+    console.log('Sending heartbeat to hub');
     ws.send(JSON.stringify({ type: MessageType.HEARTBEAT }));
   }, 10000);
 }
@@ -76,7 +76,7 @@ async function main() {
 async function checkURL(url: string): Promise<
   Omit<
     WebsiteTick,
-    'status' | 'websiteId' | 'validatorId' | 'createdAt' | 'id'
+    'status' | 'websiteId' | 'validatorId' | 'createdAt' | 'id' | 'region'
   > & {
     statusCode: number;
   }
@@ -234,7 +234,7 @@ async function validateHandler(
   keypair: Keypair
 ) {
   console.log(`Validating ${url}`);
-  const signedMessage = await signMessage(`Replying to ${callbackId}`, keypair);
+  const signedMessage = await signMessage(REPLY_MESSAGE(callbackId), keypair);
 
   try {
     const {

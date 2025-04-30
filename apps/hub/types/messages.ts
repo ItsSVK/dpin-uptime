@@ -1,4 +1,4 @@
-import { MessageType } from 'common/types';
+import { MessageType } from 'common';
 
 export interface ValidationData {
   validatorId: string;

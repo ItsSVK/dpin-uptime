@@ -15,24 +15,14 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(uuid())
-  email          String
-  walletAddress  String    @unique
-  currentBalance Float     @default(0) // in SOL
+  id             String        @id @default(uuid())
+  email          String?
+  walletAddress  String        @unique
+  currentBalance Float         @default(0) // in SOL
   websites       Website[]
-  deposits       Deposit[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-}
-
-model Deposit {
-  id        String            @id @default(uuid())
-  userId    String
-  user      User              @relation(fields: [userId], references: [id])
-  amount    Float // in SOL
-  signature String // Solana transaction signature
-  status    TransactionStatus @default(Pending)
-  createdAt DateTime          @default(now())
+  transactions   Transaction[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model Website {
@@ -95,11 +85,14 @@ model WebsiteTick {
 model Transaction {
   id              String            @id @default(uuid())
   signature       String
+  transactionType TransactionType
   status          TransactionStatus @default(Pending)
   retryCount      Int               @default(0)
   instructionData Json
-  validatorId     String
-  validator       Validator         @relation(fields: [validatorId], references: [id])
+  validatorId     String?
+  validator       Validator?        @relation(fields: [validatorId], references: [id])
+  userId          String?
+  user            User?             @relation(fields: [userId], references: [id])
   amount          BigInt
   lastCheckedAt   DateTime?
   createdAt       DateTime          @default(now())
@@ -166,4 +159,9 @@ enum Region {
   BRAZIL
   SOUTH_AFRICA
   // Add more as needed
+}
+
+enum TransactionType {
+  DEPOSIT
+  PAYOUT
 }
