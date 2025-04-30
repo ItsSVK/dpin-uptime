@@ -21,6 +21,7 @@ interface DashboardPageProps {
     avgUptime: number;
     avgResponse: number;
     hasActiveValidator: boolean;
+    userBalance: number;
   };
 }
 
@@ -59,7 +60,7 @@ export default function DashboardPage({ websites, stats }: DashboardPageProps) {
 
   return (
     <div className="container space-y-6 p-8 pt-6 w-full max-w-screen-xl mx-auto">
-      <WebsiteListHeader />
+      <WebsiteListHeader balance={stats.userBalance} />
 
       {!stats.hasActiveValidator && (
         <div className="bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded-md backdrop-blur-sm">

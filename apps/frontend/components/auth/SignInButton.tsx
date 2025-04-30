@@ -79,10 +79,9 @@ function SignInButtonContent() {
       const message = new TextEncoder().encode(messageStr);
 
       const signature = await signMessage(message);
-      const signatureBase58 = bs58.encode(signature);
 
       const user = await verifySignatureAndUpsertUser(
-        signatureBase58,
+        JSON.stringify(Array.from(signature)),
         publicKey.toBase58()
       );
 
@@ -93,7 +92,7 @@ function SignInButtonContent() {
       const token = await signJWT({
         userId: user.id,
         walletAddress: publicKey.toBase58(),
-        signature: signatureBase58,
+        signature: bs58.encode(signature),
       });
 
       await setAuthCookie(token);

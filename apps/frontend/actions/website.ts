@@ -5,6 +5,8 @@ import { prismaClient } from 'db/client';
 import { formatUrl } from '@/lib/url';
 import { getUserFromJWT } from '@/lib/auth';
 import { WebsiteStatus } from '@prisma/client';
+import { getUserBalance } from '@/actions/deposit';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 interface Response<T> {
   success: boolean;
@@ -26,7 +28,7 @@ export async function getWebsite(
   const data = await prismaClient.website.findFirst({
     where: {
       id,
-      userId: user.walletAddress,
+      userId: user.userId,
     },
     include: {
       ticks: {
@@ -63,7 +65,7 @@ export async function getWebsites(): Promise<
 
   const data = await prismaClient.website.findMany({
     where: {
-      userId: user.walletAddress,
+      userId: user.userId,
     },
     orderBy: {
       createdAt: 'desc',
@@ -85,13 +87,20 @@ export async function createWebsite(
   checkFrequency: number
 ): Promise<Response<Website>> {
   const user = await getUserFromJWT();
-  if (!user) {
+  const userBalance = await getUserBalance();
+  if (!user || !userBalance.success) {
     return {
       success: false,
       message: 'Unauthorized',
     };
   }
 
+  if (userBalance.balance && userBalance.balance < 0.1 * LAMPORTS_PER_SOL) {
+    return {
+      success: false,
+      message: 'Insufficient balance',
+    };
+  }
   const formattedUrl = formatUrl(url);
   const name = urlName || new URL(formattedUrl).hostname;
 
@@ -99,7 +108,7 @@ export async function createWebsite(
     data: {
       url: formattedUrl,
       name,
-      userId: user.walletAddress,
+      userId: user.userId,
       status: WebsiteStatus.UNKNOWN,
       checkFrequency,
       uptimePercentage: 100,
@@ -128,7 +137,7 @@ export async function updateWebsite(
   const updatedData = await prismaClient.website.update({
     where: {
       id,
-      userId: user.walletAddress,
+      userId: user.userId,
     },
     data,
     include: {
@@ -168,7 +177,7 @@ export async function deleteWebsite(ids: string[]): Promise<Response<void>> {
       prismaClient.website.deleteMany({
         where: {
           id: { in: ids },
-          userId: user.walletAddress,
+          userId: user.userId,
         },
       }),
     ]);
