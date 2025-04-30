@@ -1,4 +1,4 @@
-import { prismaClient } from '../../../packages/db/prisma/migrations/src';
+import { prismaClient } from 'db/client';
 import { Region } from '@prisma/client';
 import type { ServerWebSocket } from 'bun';
 

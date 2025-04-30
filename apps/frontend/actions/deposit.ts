@@ -1,6 +1,6 @@
 'use server';
 
-import { prismaClient } from '../../../packages/db/prisma/migrations/src';
+import { prismaClient } from 'db/client';
 import { getUserFromJWT } from '@/lib/auth';
 import { TransactionStatus, TransactionType, User } from '@prisma/client';
 import { getParsedTransferDetails } from '@/lib/utils';

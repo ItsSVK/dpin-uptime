@@ -1,6 +1,6 @@
 'use server';
 
-import { prismaClient } from '../../../packages/db/prisma/migrations/src';
+import { prismaClient } from 'db/client';
 import { TransactionType, Validator } from '@prisma/client';
 import {
   Keypair,

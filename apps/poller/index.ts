@@ -5,7 +5,7 @@ import {
   SystemProgram,
   Transaction,
 } from '@solana/web3.js';
-import { prismaClient } from '../../packages/db/prisma/migrations/src';
+import { prismaClient } from 'db/client';
 import { TransactionStatus, TransactionType } from '@prisma/client';
 import { connection } from 'common';
 // Configuration

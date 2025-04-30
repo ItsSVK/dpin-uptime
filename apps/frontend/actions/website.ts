@@ -1,7 +1,7 @@
 'use server';
 
 import { Website, WebsiteTick } from '@/types/website';
-import { prismaClient } from '../../../packages/db/prisma/migrations/src';
+import { prismaClient } from 'db/client';
 import { formatUrl } from '@/lib/url';
 import { getUserFromJWT } from '@/lib/auth';
 import { WebsiteStatus } from '@prisma/client';

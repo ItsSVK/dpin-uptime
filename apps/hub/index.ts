@@ -12,7 +12,7 @@ import { WebsiteStatus, Prisma, UptimePeriod } from '@prisma/client';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { ValidatorManager } from './utils/validatorSelection';
 import { mapToRegion, isLocalhost } from './utils/region';
-import { prismaClient } from '../../packages/db/prisma/migrations/src';
+import { prismaClient } from 'db/client';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 const validatorManager = new ValidatorManager();
