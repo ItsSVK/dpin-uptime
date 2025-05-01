@@ -490,7 +490,9 @@ async function handleSignupMessage(
   );
 
   if (verified) {
-    const geoData = await getGeoData(ws.remoteAddress || '0.0.0.0');
+    const ip = ws.remoteAddress || '0.0.0.0';
+
+    const geoData = await getGeoData(formatIP(ip));
 
     const signUpData: SignupIncomingMessage = {
       ...data.data,
@@ -752,4 +754,29 @@ function getTierBonus(tier: 'New' | 'Trusted' | 'Expert'): number {
   if (tier === 'Expert') return 0.5;
   if (tier === 'Trusted') return 0.2;
   return 0;
+}
+
+function formatIP(ip: string) {
+  const ipv4MappedRegex = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/;
+
+  // Handle IPv6 loopback
+  if (ip === '::1') {
+    return '127.0.0.1';
+  }
+
+  // Handle IPv4-mapped IPv6
+  const mappedMatch = ip.match(ipv4MappedRegex);
+  if (mappedMatch) {
+    return mappedMatch[1];
+  }
+
+  // Check for regular IPv4
+  const ipv4Regex =
+    /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+  if (ipv4Regex.test(ip)) {
+    return ip;
+  }
+
+  // Return raw IPv6 or unrecognized format as-is
+  return ip;
 }
