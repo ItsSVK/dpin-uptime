@@ -87,4 +87,4 @@ export function timeSince(date: Date): string {
   return Math.floor(seconds / 86400) + ' days ago';
 }
 
-export const publicRoutes = ['/sign', '/', '/payout'];
+export const publicRoutes = ['/sign', '/', '/payout', '/validator'];

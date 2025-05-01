@@ -5,7 +5,7 @@ import { BackgroundGradient } from '@/components/background-gradient';
 
 export default function SignInPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-black">
+    <main className="min-h-[calc(100vh-135px)] flex items-center justify-center bg-black">
       <BackgroundGradient />
       <div className="text-center z-10">
         <h1 className="text-4xl font-bold mb-8 text-white">

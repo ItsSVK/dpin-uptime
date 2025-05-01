@@ -6,6 +6,8 @@ import { WalletProvider } from '@/components/providers/WalletProvider';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { Navbar } from '@/components/navbar';
 import { Toaster } from 'sonner';
+import { Footer } from '@/components/Footer';
+import { LayoutWraper } from '@/components/pages/LayoutWraper';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,7 +27,7 @@ export default function RootLayout({
         <WalletProvider>
           <div className="flex min-h-screen flex-col bg-black text-white">
             <Navbar />
-            {children}
+            <LayoutWraper>{children}</LayoutWraper>
           </div>
         </WalletProvider>
         <Toaster position="top-right" richColors />

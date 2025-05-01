@@ -1,4 +1,5 @@
 'use client';
+import CopyButton from '@/components/pages/CopyButton';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,9 +17,19 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+// Add this style tag at the top level of the page to ensure smooth scrolling
+<style jsx global>{`
+  html {
+    scroll-behavior: smooth;
+  }
+`}</style>;
+
 export default function ValidatorSignupPage() {
   return (
-    <div className="container space-y-8 p-8 pt-6 mx-auto max-w-4xl">
+    <div
+      id="validator"
+      className="container space-y-8 p-8 pt-6 mx-auto max-w-4xl"
+    >
       {/* Header Section */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">
@@ -169,7 +180,10 @@ export default function ValidatorSignupPage() {
       </Card>
 
       {/* Setup Instructions */}
-      <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+      <Card
+        id="install"
+        className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm"
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Terminal className="h-5 w-5 text-emerald-500" />
@@ -182,10 +196,14 @@ export default function ValidatorSignupPage() {
             <h3 className="text-lg font-semibold text-zinc-100">
               1. Pull the Docker Image
             </h3>
-            <div className="bg-zinc-950 p-4 rounded-md">
+            <div className="bg-zinc-950 p-4 rounded-md relative group">
               <code className="text-sm text-zinc-300">
                 docker pull ghcr.io/dpin-uptime/validator:latest
               </code>
+              <CopyButton
+                id="docker-pull"
+                text="docker pull ghcr.io/dpin-uptime/validator:latest"
+              />
             </div>
           </div>
 
@@ -198,12 +216,16 @@ export default function ValidatorSignupPage() {
               Replace YOUR_SOLANA_PUBLIC_KEY with your wallet address and
               YOUR_EMAIL with your email
             </p>
-            <div className="bg-zinc-950 p-4 rounded-md">
+            <div className="bg-zinc-950 p-4 rounded-md relative group">
               <code className="text-sm text-zinc-300 whitespace-pre-wrap">
                 docker run -d \ --name dpin-validator \ -e
                 WALLET_ADDRESS=YOUR_SOLANA_PUBLIC_KEY \ -e EMAIL=YOUR_EMAIL \ -e
                 HUB_URL=wss://hub.dpin.io \ ghcr.io/dpin-uptime/validator:latest
               </code>
+              <CopyButton
+                id="docker-run"
+                text="docker run -d \ --name dpin-validator \ -e WALLET_ADDRESS=YOUR_SOLANA_PUBLIC_KEY \ -e EMAIL=YOUR_EMAIL \ -e HUB_URL=wss://hub.dpin.io \ ghcr.io/dpin-uptime/validator:latest"
+              />
             </div>
           </div>
 
@@ -223,10 +245,14 @@ export default function ValidatorSignupPage() {
             <h3 className="text-lg font-semibold text-zinc-100">
               4. Monitor Status
             </h3>
-            <div className="bg-zinc-950 p-4 rounded-md">
+            <div className="bg-zinc-950 p-4 rounded-md relative group">
               <code className="text-sm text-zinc-300">
                 docker logs -f dpin-validator
               </code>
+              <CopyButton
+                id="docker-logs"
+                text="docker logs -f dpin-validator"
+              />
             </div>
           </div>
 
@@ -236,17 +262,25 @@ export default function ValidatorSignupPage() {
               Additional Commands
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-zinc-950 p-4 rounded-md">
+              <div className="bg-zinc-950 p-4 rounded-md relative group">
                 <p className="text-sm text-zinc-500 mb-1">Stop validator:</p>
                 <code className="text-sm text-zinc-300">
                   docker stop dpin-validator
                 </code>
+                <CopyButton
+                  id="docker-stop"
+                  text="docker stop dpin-validator"
+                />
               </div>
-              <div className="bg-zinc-950 p-4 rounded-md">
+              <div className="bg-zinc-950 p-4 rounded-md relative group">
                 <p className="text-sm text-zinc-500 mb-1">Restart validator:</p>
                 <code className="text-sm text-zinc-300">
                   docker restart dpin-validator
                 </code>
+                <CopyButton
+                  id="docker-restart"
+                  text="docker restart dpin-validator"
+                />
               </div>
             </div>
           </div>
@@ -291,7 +325,7 @@ export default function ValidatorSignupPage() {
       </Card>
 
       {/* Support Section */}
-      <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+      {/* <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Need Help?</CardTitle>
           <CardDescription>
@@ -306,7 +340,7 @@ export default function ValidatorSignupPage() {
             Documentation
           </Button>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }
