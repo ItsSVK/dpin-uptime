@@ -62,44 +62,25 @@ jobs:
           echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Deploy to each validator server
-          for HOST in ${{ vars.VALIDATOR_HOSTS }}; do
-            echo "Deploying to validator host: $HOST"
+          # SSH and run deployment commands
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+            # Pull latest image
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
             
-            # Get private key from JSON map, ensuring we escape any special characters
-            PRIVATE_KEY=$(echo "$VALIDATOR_KEYS" | jq -r --arg host "$HOST" '.[$host]' | sed 's/"/\\"/g')
+            # Stop existing container
+            docker stop dpin-${{ env.SERVICE_NAME }} || true
+            docker rm dpin-${{ env.SERVICE_NAME }} || true
             
-            if [ "$PRIVATE_KEY" = "null" ]; then
-              echo "❌ No private key found for host: $HOST"
-              exit 1
-            fi
+            # Start new container
+            docker run -d \
+              --name dpin-${{ env.SERVICE_NAME }} \
+              --restart unless-stopped \
+              --network dpin-network \
+              -e PRIVATE_KEY=${{ secrets.VALIDATOR_PRIVATE_KEY }} \
+              -e HUB_URL=${{ secrets.HUB_URL }} \
+              --init \
+              ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
             
-            # Create a temporary script with the commands
-            CONTAINER_NAME="dpin-${{ env.SERVICE_NAME }}-$(echo $HOST | cut -d. -f1)"
-            IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}"
-            
-            # Create deployment commands
-            DEPLOY_CMD="docker pull ${IMAGE_TAG} && \
-              docker stop ${CONTAINER_NAME} || true && \
-              docker rm ${CONTAINER_NAME} || true && \
-              docker run -d \
-                --name ${CONTAINER_NAME} \
-                --restart unless-stopped \
-                --network dpin-network \
-                -e PRIVATE_KEY='${PRIVATE_KEY}' \
-                -e HUB_URL=${{ secrets.HUB_URL }} \
-                --init \
-                ${IMAGE_TAG} && \
-              docker image prune -f"
-            
-            # Execute deployment commands
-            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$HOST "${DEPLOY_CMD}"
-            
-            # Check if deployment was successful
-            if [ $? -eq 0 ]; then
-              echo "✅ Successfully deployed to $HOST"
-            else
-              echo "❌ Failed to deploy to $HOST"
-              exit 1
-            fi
-          done
+            # Cleanup old images
+            docker image prune -f
+          EOF
