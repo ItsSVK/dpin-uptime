@@ -1,6 +1,5 @@
 'use client';
 import CopyButton from '@/components/pages/CopyButton';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,

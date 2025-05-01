@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MonitorCheck, Menu, X } from 'lucide-react';
 import { SignInButton } from '@/components/auth/SignInButton';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { clearAuthCookie } from '@/lib/auth';
 import { isCookieValid } from '@/lib/auth';
 import { useEffect, useCallback, useState } from 'react';
@@ -16,7 +16,6 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { connected, publicKey } = useWallet();
-  const searchParams = useSearchParams();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -76,7 +75,7 @@ export function Navbar() {
         }, 800);
       }
     },
-    [pathname, searchParams]
+    [pathname, router, scrollToSection]
   );
 
   const navItems = [

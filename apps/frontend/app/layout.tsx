@@ -6,7 +6,6 @@ import { WalletProvider } from '@/components/providers/WalletProvider';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { Navbar } from '@/components/navbar';
 import { Toaster } from 'sonner';
-import { Footer } from '@/components/Footer';
 import { LayoutWraper } from '@/components/pages/LayoutWraper';
 
 const inter = Inter({ subsets: ['latin'] });
