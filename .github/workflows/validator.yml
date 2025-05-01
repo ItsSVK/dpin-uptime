@@ -54,8 +54,8 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          VALIDATOR_KEYS: ${{ secrets.VALIDATOR_KEYS }}
         run: |
           # Setup SSH
           mkdir -p ~/.ssh
