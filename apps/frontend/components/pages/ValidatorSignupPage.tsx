@@ -197,11 +197,11 @@ export default function ValidatorSignupPage() {
             </h3>
             <div className="bg-zinc-950 p-4 rounded-md relative group">
               <code className="text-sm text-zinc-300">
-                docker pull ghcr.io/dpin-uptime/validator:latest
+                docker pull itssvk/dpin-validator:latest
               </code>
               <CopyButton
                 id="docker-pull"
-                text="docker pull ghcr.io/dpin-uptime/validator:latest"
+                text="docker pull itssvk/dpin-validator:latest"
               />
             </div>
           </div>
@@ -212,45 +212,38 @@ export default function ValidatorSignupPage() {
               2. Run the Validator
             </h3>
             <p className="text-sm text-zinc-400 mb-2">
-              Replace YOUR_SOLANA_PUBLIC_KEY with your wallet address and
-              YOUR_EMAIL with your email
+              Replace YOUR_SOLANA_PRIVATE_KEY with your wallet private key
             </p>
             <div className="bg-zinc-950 p-4 rounded-md relative group">
               <code className="text-sm text-zinc-300 whitespace-pre-wrap">
-                docker run -d \ --name dpin-validator \ -e
-                WALLET_ADDRESS=YOUR_SOLANA_PUBLIC_KEY \ -e EMAIL=YOUR_EMAIL \ -e
-                HUB_URL=wss://hub.dpin.io \ ghcr.io/dpin-uptime/validator:latest
+                docker run -d --name dpin-validator -e
+                PRIVATE_KEY=YOUR_SOLANA_PRIVATE_KEY -e
+                HUB_URL=wss://dpin-hub.itssvk.dev/ws/ --init
+                itssvk/dpin-validator:latest
               </code>
               <CopyButton
                 id="docker-run"
-                text="docker run -d \ --name dpin-validator \ -e WALLET_ADDRESS=YOUR_SOLANA_PUBLIC_KEY \ -e EMAIL=YOUR_EMAIL \ -e HUB_URL=wss://hub.dpin.io \ ghcr.io/dpin-uptime/validator:latest"
+                text="docker run -d --name dpin-validator -e PRIVATE_KEY=YOUR_SOLANA_PRIVATE_KEY -e HUB_URL=wss://dpin-hub.itssvk.dev/ws/ --init itssvk/dpin-validator:latest"
               />
             </div>
+            <p className="text-sm text-zinc-400 mb-2 italic">
+              *we need the private key to be able to sign the validation
+              requests
+            </p>
           </div>
 
           {/* Step 3 */}
           <div className="space-y-2">
             <h3 className="text-lg font-semibold text-zinc-100">
-              3. Verify Your Email
-            </h3>
-            <p className="text-sm text-zinc-400">
-              Check your email and click the verification link to activate your
-              validator
-            </p>
-          </div>
-
-          {/* Step 4 */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-zinc-100">
-              4. Monitor Status
+              3. Monitor Status (last 100 lines)
             </h3>
             <div className="bg-zinc-950 p-4 rounded-md relative group">
               <code className="text-sm text-zinc-300">
-                docker logs -f dpin-validator
+                docker logs --tail 100 -f dpin-validator
               </code>
               <CopyButton
                 id="docker-logs"
-                text="docker logs -f dpin-validator"
+                text="docker logs --tail 100 -f dpin-validator"
               />
             </div>
           </div>
