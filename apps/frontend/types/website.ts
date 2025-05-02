@@ -13,4 +13,11 @@ export interface ProcessedWebsite extends Website {
   responseTime: number | null;
   lastChecked: string;
   uptimeTicks: WebsiteStatus[];
+  uptimeHistory?: {
+    period: string;
+    uptimePercentage: number;
+    averageResponse: number | null;
+    totalIncidents: number;
+    totalDowntime: number;
+  }[];
 }

@@ -759,6 +759,8 @@ setInterval(async () => {
             },
           });
         }
+        // Update historical uptime data after all ticks are created
+        await updateHistoricalData(tx, website.id);
       });
 
       // Update validator metrics (activeChecks)

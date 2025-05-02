@@ -4,6 +4,13 @@ import type { ProcessedWebsite } from '@/types/website';
 export function processWebsiteData(
   website: Website & {
     ticks: WebsiteTick[];
+    uptimeHistory?: {
+      period: string;
+      uptimePercentage: number;
+      averageResponse: number | null;
+      totalIncidents: number;
+      totalDowntime: number;
+    }[];
   }
 ): ProcessedWebsite {
   // Sort ticks by creation time
@@ -73,6 +80,7 @@ export function processWebsiteData(
     lastChecked,
     uptimeTicks: windows,
     ticks: sortedTicks,
+    uptimeHistory: website.uptimeHistory,
   };
 }
 

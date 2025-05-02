@@ -10,10 +10,14 @@ interface WebsiteHeaderProps {
 }
 
 export function WebsiteHeader({ website }: WebsiteHeaderProps) {
+  const getUptime = (period: string) =>
+    website.uptimeHistory?.find(h => h.period === period)?.uptimePercentage ??
+    website.uptimePercentage;
+
   const uptimeStats = {
-    day: website.uptimePercentage,
-    week: website.uptimePercentage, // We'll need to add this to the backend
-    month: website.uptimePercentage, // We'll need to add this to the backend
+    day: getUptime('DAILY'),
+    week: getUptime('WEEKLY'),
+    month: getUptime('MONTHLY'),
   };
 
   return (

@@ -36,6 +36,7 @@ export async function getWebsite(
           createdAt: 'asc',
         },
       },
+      uptimeHistory: true,
     },
   });
 
