@@ -21,15 +21,36 @@ const COST_PER_VALIDATION = 100; // in lamports
 const VALIDATION_TIMEOUT = 10000; // 10 seconds
 const PLATFORM_FEE_PERCENT = 0.1; // 10% platform fee
 
+type MyWebSocketData = {
+  clientIp: string;
+};
+
 Bun.serve({
   fetch(req, server) {
-    if (server.upgrade(req)) {
+    const forwardedFor = req.headers.get('x-forwarded-for');
+    const clientIp =
+      forwardedFor?.split(',')[0].trim() ??
+      req.headers.get('cf-connecting-ip') ??
+      '0.0.0.0';
+
+    if (
+      server.upgrade(req, {
+        data: { clientIp } as MyWebSocketData,
+      })
+    ) {
       return;
     }
+
     return new Response('Upgrade failed', { status: 500 });
   },
   port: 8081,
   websocket: {
+    open(ws) {
+      console.log(
+        'Validator connected from IP:',
+        (ws.data as MyWebSocketData).clientIp
+      );
+    },
     message(ws: ServerWebSocket<unknown>, message: string) {
       const data: IncomingMessage = JSON.parse(message);
 
@@ -54,7 +75,12 @@ Bun.serve({
       for (const validator of validatorManager.getAllValidators()) {
         if (validator.socket === ws) {
           validatorManager.removeValidator(validator.validatorId);
-          console.log('Validator Disconnected: ', validator.publicKey);
+          console.log(
+            `Validator Disconnected from IP ${
+              (ws.data as MyWebSocketData).clientIp
+            }:`,
+            validator.publicKey
+          );
           (async () => {
             await prismaClient.validator.update({
               where: { id: validator.validatorId },
@@ -779,4 +805,18 @@ function formatIP(ip: string) {
 
   // Return raw IPv6 or unrecognized format as-is
   return ip;
+}
+
+function getClientIp(req: Request): string {
+  const headers = req.headers;
+  const cfConnectingIp = headers.get('cf-connecting-ip');
+  const forwardedFor = headers.get('x-forwarded-for');
+  const realIp = headers.get('x-real-ip');
+
+  return (
+    cfConnectingIp ||
+    (forwardedFor && forwardedFor.split(',')[0].trim()) ||
+    realIp ||
+    '0.0.0.0'
+  );
 }
