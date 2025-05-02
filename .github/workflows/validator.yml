@@ -77,7 +77,7 @@ jobs:
               --restart unless-stopped \
               --network dpin-network \
               -e PRIVATE_KEY=${{ secrets.VALIDATOR_PRIVATE_KEY }} \
-              -e HUB_URL=ws://dpin-hub:8081 \
+              -e HUB_URL=${{ secrets.HUB_URL }} \
               --init \
               ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
             
@@ -88,6 +88,8 @@ jobs:
 # docker run -d \
 # --name dpin-validator \
 # -e PRIVATE_KEY=4dpfw2kemvfQZmY4diM1u72ere7rowAvEoxMQBQ9rhztQgk8wwYoo9XRKMbC7Q1EDoWV3vsdEvmPxrb4eBgXzUsK \
-# -e HUB_URL=wss://dpin-hub.itssvk.dev/ws \
+# -e HUB_URL=wss://dpin-hub.itssvk.dev/ws/ \
 # --init \
 # itssvk/dpin-validator:latest
+
+# -e HUB_URL=ws://dpin-hub:8081 \
