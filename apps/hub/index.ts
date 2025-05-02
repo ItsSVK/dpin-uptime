@@ -27,11 +27,7 @@ type MyWebSocketData = {
 
 Bun.serve({
   fetch(req, server) {
-    const forwardedFor = req.headers.get('x-forwarded-for');
-    const clientIp =
-      forwardedFor?.split(',')[0].trim() ??
-      req.headers.get('cf-connecting-ip') ??
-      '0.0.0.0';
+    const clientIp = getClientIp(req);
 
     if (
       server.upgrade(req, {
@@ -468,6 +464,12 @@ async function updateHistoricalData(
       },
     });
   }
+
+  // Update the Website table's uptimePercentage to match the latest daily uptime
+  await tx.website.update({
+    where: { id: websiteId },
+    data: { uptimePercentage: daily?.uptimePercentage ?? 0 },
+  });
 }
 
 async function validateWebsite(
