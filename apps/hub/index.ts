@@ -516,7 +516,7 @@ async function handleSignupMessage(
   );
 
   if (verified) {
-    const ip = ws.remoteAddress || '0.0.0.0';
+    const ip = (ws.data as MyWebSocketData).clientIp || '0.0.0.0';
 
     const geoData = await getGeoData(formatIP(ip));
 
