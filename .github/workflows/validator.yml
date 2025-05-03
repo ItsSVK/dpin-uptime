@@ -44,6 +44,7 @@ jobs:
           context: .
           file: ${{ env.DOCKERFILE_PATH }}
           push: ${{ github.event_name != 'pull_request' }}
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
