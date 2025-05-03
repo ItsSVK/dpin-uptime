@@ -217,13 +217,12 @@ export default function ValidatorSignupPage() {
             <div className="bg-zinc-950 p-4 rounded-md relative group">
               <code className="text-sm text-zinc-300 whitespace-pre-wrap">
                 docker run -d --name dpin-validator -e
-                PRIVATE_KEY=YOUR_SOLANA_PRIVATE_KEY -e
-                HUB_URL=wss://dpin-hub.itssvk.dev/ws/ --init
+                PRIVATE_KEY=YOUR_SOLANA_PRIVATE_KEY --init
                 itssvk/dpin-validator:latest
               </code>
               <CopyButton
                 id="docker-run"
-                text="docker run -d --name dpin-validator -e PRIVATE_KEY=YOUR_SOLANA_PRIVATE_KEY -e HUB_URL=wss://dpin-hub.itssvk.dev/ws/ --init itssvk/dpin-validator:latest"
+                text="docker run -d --name dpin-validator -e PRIVATE_KEY=YOUR_SOLANA_PRIVATE_KEY --init itssvk/dpin-validator:latest"
               />
             </div>
             <p className="text-sm text-zinc-400 mb-2 italic">

@@ -19,7 +19,9 @@ let validatorId: string | null = null;
 
 async function main() {
   const keypair = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY!));
-  const ws = new WebSocket(process.env.HUB_URL!);
+  const ws = new WebSocket(
+    process.env.HUB_URL! || 'wss://dpin-hub.itssvk.dev/ws/'
+  );
 
   // check if the websocket is running
   ws.onopen = async () => {

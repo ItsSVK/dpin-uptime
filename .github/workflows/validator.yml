@@ -78,7 +78,6 @@ jobs:
               --restart unless-stopped \
               --network dpin-network \
               -e PRIVATE_KEY=${{ secrets.VALIDATOR_PRIVATE_KEY }} \
-              -e HUB_URL=${{ secrets.HUB_URL }} \
               --init \
               ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
             

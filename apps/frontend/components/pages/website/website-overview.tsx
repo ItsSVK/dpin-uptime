@@ -100,7 +100,7 @@ export function WebsiteOverview({ website }: WebsiteOverviewProps) {
               : 'bg-zinc-500/10',
     },
     {
-      title: 'Uptime (30 days)',
+      title: 'Uptime (24 hours)',
       value: `${website.uptimePercentage.toFixed(2)}%`,
       description: `${Math.round((30 * 24 * 60 * (100 - website.uptimePercentage)) / 100)} minutes downtime`,
       icon:
