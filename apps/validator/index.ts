@@ -25,7 +25,7 @@ async function main() {
 
   // check if the websocket is running
   ws.onopen = async () => {
-    console.log('Connected to hub, signing up');
+    console.log('Connected to DPIN Hub, signing up');
     const callbackId = randomUUIDv7();
     CALLBACKS[callbackId] = (data: SignupOutgoingMessage) => {
       validatorId = data.validatorId;
