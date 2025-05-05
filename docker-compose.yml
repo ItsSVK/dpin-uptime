@@ -36,7 +36,7 @@ services:
   hub:
     build:
       context: .
-      dockerfile: Dockerfile.hub
+      dockerfile: docker/local/Dockerfile.hub
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -64,7 +64,7 @@ services:
   validator:
     build:
       context: .
-      dockerfile: Dockerfile.validator
+      dockerfile: docker/local/Dockerfile.validator
     environment:
       - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
       - HUB_URL=ws://hub:8081
@@ -83,7 +83,7 @@ services:
   poller:
     build:
       context: .
-      dockerfile: Dockerfile.poller
+      dockerfile: docker/local/Dockerfile.poller
     environment:
       - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
       - NODE_ENV=development
@@ -101,7 +101,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: docker/local/Dockerfile.frontend
     environment:
       - DATABASE_URL=postgresql://user:password@postgres:5432/dpin?schema=public
     env_file:

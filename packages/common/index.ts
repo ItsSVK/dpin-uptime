@@ -1,5 +1,6 @@
 export * from './auth';
 export * from './connection';
+// export * from './mail'; // Do not export mail utilities from the main index
 
 export interface SignupIncomingMessage {
   publicKey: string;

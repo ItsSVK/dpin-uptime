@@ -177,8 +177,8 @@ export default function DepositForm({
                       onClick={() => {
                         setAmount(prev => {
                           const val = Math.max(
-                            0.1,
-                            parseFloat(prev || '0') - 0.1
+                            0.15,
+                            parseFloat(prev || '0') - 0.15
                           );
                           return val.toFixed(2);
                         });
@@ -206,8 +206,8 @@ export default function DepositForm({
                       onClick={() => {
                         setAmount(prev => {
                           const val = Math.max(
-                            0.1,
-                            parseFloat(prev || '0') + 0.1
+                            0.15,
+                            parseFloat(prev || '0') + 0.15
                           );
                           return val.toFixed(2);
                         });

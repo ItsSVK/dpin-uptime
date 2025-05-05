@@ -15,35 +15,38 @@ datasource db {
 }
 
 model User {
-  id             String        @id @default(uuid())
-  email          String?
-  walletAddress  String        @unique
-  currentBalance Float         @default(0) // in SOL
-  websites       Website[]
-  transactions   Transaction[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id                 String               @id @default(uuid())
+  email              String?
+  walletAddress      String               @unique
+  currentBalance     Float                @default(0) // in SOL
+  emailAlertQuota    Int                  @default(10)
+  emailAlertReset    DateTime             @default(dbgenerated("NOW() + INTERVAL '1 day'"))
+  websites           Website[]
+  transactions       Transaction[]
+  notificationConfig NotificationConfig[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 }
 
 model Website {
-  id               String              @id @default(uuid())
-  name             String
-  url              String
-  userId           String
-  user             User                @relation(fields: [userId], references: [id])
-  ticks            WebsiteTick[]
-  status           WebsiteStatus       @default(UNKNOWN)
-  upSince          DateTime?
-  lastCheckedAt    DateTime?
-  checkFrequency   Int                 @default(60)
-  isPaused         Boolean             @default(false)
-  monitoringSince  DateTime            @default(now())
-  uptimePercentage Float               @default(100)
-  averageResponse  Float?
-  createdAt        DateTime            @default(now())
-  notifications    NotificationConfig?
-  uptimeHistory    UptimeHistory[]
-  preferredRegion  String?
+  id                 String              @id @default(uuid())
+  name               String
+  url                String
+  userId             String
+  user               User                @relation(fields: [userId], references: [id])
+  ticks              WebsiteTick[]
+  status             WebsiteStatus       @default(UNKNOWN)
+  upSince            DateTime?
+  lastCheckedAt      DateTime?
+  checkFrequency     Int                 @default(60)
+  isPaused           Boolean             @default(false)
+  monitoringSince    DateTime            @default(now())
+  uptimePercentage   Float               @default(100)
+  averageResponse    Float?
+  createdAt          DateTime            @default(now())
+  uptimeHistory      UptimeHistory[]
+  preferredRegion    String?
+  notificationConfig NotificationConfig?
 }
 
 model Validator {
@@ -99,17 +102,16 @@ model Transaction {
 }
 
 model NotificationConfig {
-  id         String   @id @default(uuid())
-  websiteId  String   @unique
-  website    Website  @relation(fields: [websiteId], references: [id])
-  email      Boolean  @default(true)
-  sms        Boolean  @default(false)
-  slack      Boolean  @default(false)
-  webhook    Boolean  @default(false)
-  webhookUrl String?
-  slackUrl   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  userId                 String
+  websiteId              String   @unique
+  user                   User     @relation(fields: [userId], references: [id])
+  website                Website  @relation(fields: [websiteId], references: [id])
+  email                  String?
+  isHighPingAlertEnabled Boolean  @default(false)
+  isDownAlertEnabled     Boolean  @default(false)
+  createdAt              DateTime @default(now())
+
+  @@id([userId, websiteId])
 }
 
 model UptimeHistory {

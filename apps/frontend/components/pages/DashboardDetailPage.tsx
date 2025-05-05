@@ -1,5 +1,16 @@
 'use client';
-import { ArrowLeft, ExternalLink, Globe } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle,
+  ExternalLink,
+  AlertCircle,
+  Globe,
+  Link2,
+  Mail,
+  Phone,
+  SendHorizonal,
+  Slack,
+} from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,20 +26,59 @@ import { WebsiteOverview } from '@/components/pages/website/website-overview';
 import { UptimeHistoryChart } from '@/components/pages/website/uptime-history-chart';
 import { ResponseTimeChart } from '@/components/pages/website/response-time-chart';
 import { useState, useEffect } from 'react';
-import { getWebsite, hasActiveValidators } from '@/actions/website';
+import {
+  getWebsite,
+  hasActiveValidators,
+  sendTestAlert,
+} from '@/actions/website';
 import { processWebsiteData } from '@/lib/websiteUtils';
 import { ProcessedWebsite } from '@/types/website';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { updateNotificationConfig } from '@/actions/user';
+import { NotificationConfig } from '@prisma/client';
+import { useRouter } from 'next/navigation';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 export default function DashboardDetailPage({ id }: { id: string }) {
+  const router = useRouter();
   const [website, setWebsite] = useState<ProcessedWebsite | null>(null);
   const [hasActiveValidator, setHasActiveValidator] = useState(false);
+  const [notificationConfig, setNotificationConfig] =
+    useState<NotificationConfig>({
+      email: '',
+      isHighPingAlertEnabled: false,
+      isDownAlertEnabled: false,
+      userId: '',
+      createdAt: new Date(),
+      websiteId: '',
+    });
   const [notifications, setNotifications] = useState({
-    email: true,
+    email: notificationConfig.email !== null,
     sms: false,
-    slack: true,
+    slack: false,
     webhook: false,
   });
-
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isHighPingAlertEnabled, setIsHighPingAlertEnabled] = useState(false);
+  const [isDownAlertEnabled, setIsDownAlertEnabled] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSendingTestAlert, setIsSendingTestAlert] = useState(false);
   useEffect(() => {
     const fetchWebsite = async () => {
       const response = await getWebsite(id);
@@ -36,6 +86,14 @@ export default function DashboardDetailPage({ id }: { id: string }) {
       if (response.success && response.data) {
         setWebsite(processWebsiteData(response.data));
         setHasActiveValidator(hasActiveValidatorResponse.data || false);
+        setNotificationConfig(response.data.notificationConfig);
+        setEmail(response.data.notificationConfig.email || '');
+        setIsHighPingAlertEnabled(
+          response.data.notificationConfig.isHighPingAlertEnabled
+        );
+        setIsDownAlertEnabled(
+          response.data.notificationConfig.isDownAlertEnabled
+        );
       }
     };
     fetchWebsite();
@@ -47,10 +105,67 @@ export default function DashboardDetailPage({ id }: { id: string }) {
   }, [id]);
 
   const handleNotificationChange = (type: keyof typeof notifications) => {
-    setNotifications(prev => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
+    if (type === 'email') {
+      setEmailModalOpen(true);
+      return;
+    } else {
+      setNotifications(prev => ({ ...prev, [type]: !prev[type] }));
+    }
+  };
+
+  // const handleAlertOptionChange = (type: keyof typeof notificationConfig) => {
+  //   setNotificationConfig(prev => ({ ...prev, [type]: !prev[type] }));
+  // };
+
+  const handleSaveEmail = async () => {
+    setIsSaving(true);
+    // setNotifications(prev => ({ ...prev, email: true }));
+    // TODO: Persist email and alertOptions to backend
+    await updateNotificationConfig({
+      websiteId: id,
+      isHighPingAlertEnabled,
+      isDownAlertEnabled,
+      email,
+    });
+
+    toast.success('Notification settings saved');
+    setIsSaving(false);
+    setEmailModalOpen(false);
+    setNotificationConfig({
+      ...notificationConfig,
+      email,
+      isHighPingAlertEnabled,
+      isDownAlertEnabled,
+    });
+    router.refresh();
+  };
+
+  const handleSendTestAlert = async () => {
+    if (isSendingTestAlert) {
+      return;
+    }
+    if (
+      !!notificationConfig.email &&
+      (notificationConfig.isDownAlertEnabled ||
+        notificationConfig.isHighPingAlertEnabled)
+    ) {
+      setIsSendingTestAlert(true);
+      const response = await sendTestAlert(id);
+      if (response.success) {
+        toast.success(`We have sent Test Alert to ${notificationConfig.email}`);
+      } else {
+        toast.error(response.message || 'Failed to send Test Alert');
+      }
+      router.refresh();
+      setIsSendingTestAlert(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setEmailModalOpen(false);
+    setEmail(notificationConfig.email || '');
+    setIsHighPingAlertEnabled(notificationConfig.isHighPingAlertEnabled);
+    setIsDownAlertEnabled(notificationConfig.isDownAlertEnabled);
   };
 
   if (!website) {
@@ -143,6 +258,34 @@ export default function DashboardDetailPage({ id }: { id: string }) {
           </div>
         </TabsContent>
         <TabsContent value="settings" className="space-y-4 pt-4">
+          <div
+            className={`bg-${
+              website.user.emailAlertQuota === 0 ? 'amber' : 'emerald'
+            }-900/20 border-l-4 border-${
+              website.user.emailAlertQuota === 0 ? 'amber' : 'emerald'
+            }-500 p-2 rounded-md backdrop-blur-sm`}
+          >
+            <div className="flex">
+              <div className="flex-shrink-0">
+                {website.user.emailAlertQuota === 0 ? (
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                ) : (
+                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                )}
+              </div>
+              <div className="ml-3">
+                <p
+                  className={`text-sm text-${
+                    website.user.emailAlertQuota === 0 ? 'amber' : 'emerald'
+                  }-200`}
+                >
+                  {website.user.emailAlertQuota === 0
+                    ? `No email alerts available (capped at 10/day). Next reset: ${website.user.emailAlertReset}.`
+                    : `${website.user.emailAlertQuota} email alerts remaining. Resets on ${website.user.emailAlertReset}. Daily limit capped at 10.`}
+                </p>
+              </div>
+            </div>
+          </div>
           <Card className="border-zinc-800 bg-zinc-950">
             <CardHeader>
               <CardTitle>Notification Settings</CardTitle>
@@ -155,20 +298,73 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                 <div className="flex items-center justify-between rounded-md border border-zinc-800 p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900">
-                      <Globe className="h-5 w-5 text-zinc-400" />
+                      <Mail className="h-5 w-5 text-zinc-400" />
                     </div>
                     <div>
                       <h3 className="font-medium">Email Notifications</h3>
                       <p className="text-sm text-zinc-400">
-                        john@example.com, team@example.com
+                        {notificationConfig.email || 'No email set'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-10">
+                    <div className="flex items-center gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p
+                              className={`text-sm ${
+                                !!notificationConfig.email &&
+                                (notificationConfig.isDownAlertEnabled ||
+                                  notificationConfig.isHighPingAlertEnabled)
+                                  ? 'text-zinc-400 cursor-pointer transition-all duration-200 hover:bg-zinc-700/50'
+                                  : 'text-zinc-500 cursor-not-allowed opacity-50'
+                              } bg-zinc-800/50 px-2 py-1 rounded-md flex items-center gap-2`}
+                              onClick={() => handleSendTestAlert()}
+                            >
+                              {isSendingTestAlert ? (
+                                <>
+                                  <Globe className="mr-2 h-4 w-4 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  Send Test Alert
+                                  <SendHorizonal
+                                    className={`h-4 w-4 ${
+                                      !!notificationConfig.email &&
+                                      (notificationConfig.isDownAlertEnabled ||
+                                        notificationConfig.isHighPingAlertEnabled)
+                                        ? 'text-zinc-400'
+                                        : 'text-zinc-500'
+                                    }`}
+                                  />
+                                </>
+                              )}
+                            </p>
+                          </TooltipTrigger>
+                          {!(
+                            !!notificationConfig.email &&
+                            (notificationConfig.isDownAlertEnabled ||
+                              notificationConfig.isHighPingAlertEnabled)
+                          ) && (
+                            <TooltipContent>
+                              <p>
+                                Enable email notifications to send a test alert
+                              </p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <label className="relative inline-flex cursor-pointer items-center">
                       <input
                         type="checkbox"
-                        checked={notifications.email}
+                        checked={
+                          !!notificationConfig.email &&
+                          (notificationConfig.isDownAlertEnabled ||
+                            notificationConfig.isHighPingAlertEnabled)
+                        }
                         onChange={() => handleNotificationChange('email')}
                         className="peer sr-only"
                       />
@@ -180,10 +376,15 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                 <div className="flex items-center justify-between rounded-md border border-zinc-800 p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900">
-                      <Globe className="h-5 w-5 text-zinc-400" />
+                      <Phone className="h-5 w-5 text-zinc-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">SMS Notifications</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">SMS Notifications</h3>
+                        <p className="text-sm text-zinc-400 bg-zinc-800 px-2 py-1 rounded-md">
+                          Feature under development
+                        </p>
+                      </div>
                       <p className="text-sm text-zinc-400">+1 (555) 123-4567</p>
                     </div>
                   </div>
@@ -203,13 +404,15 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                 <div className="flex items-center justify-between rounded-md border border-zinc-800 p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900">
-                      <Globe className="h-5 w-5 text-zinc-400" />
+                      <Slack className="h-5 w-5 text-zinc-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">Slack Integration</h3>
-                      <p className="text-sm text-zinc-400">
-                        #monitoring-alerts channel
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">Slack Integration</h3>
+                        <p className="text-sm text-zinc-400 bg-zinc-800 px-2 py-1 rounded-md">
+                          Feature under development
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -228,10 +431,15 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                 <div className="flex items-center justify-between rounded-md border border-zinc-800 p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900">
-                      <Globe className="h-5 w-5 text-zinc-400" />
+                      <Link2 className="h-5 w-5 text-zinc-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">Webhook</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">Webhook</h3>
+                        <p className="text-sm text-zinc-400 bg-zinc-800 px-2 py-1 rounded-md">
+                          Feature under development
+                        </p>
+                      </div>
                       <p className="text-sm text-zinc-400">
                         https://example.com/webhook
                       </p>
@@ -250,16 +458,82 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                   </div>
                 </div>
 
-                <div className="pt-4">
+                {/* <div className="pt-4">
                   <Button className="bg-emerald-600 hover:bg-emerald-700">
                     Save Notification Settings
                   </Button>
-                </div>
+                </div> */}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={emailModalOpen} onOpenChange={handleCloseModal}>
+        <DialogContent className="bg-zinc-950 text-white border border-zinc-800">
+          <DialogHeader>
+            <DialogTitle>
+              {notificationConfig?.email
+                ? 'Edit Email Address'
+                : 'Enter Email Address'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-4">
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              value={email || ''}
+              onChange={e => {
+                setEmail(e.target.value);
+              }}
+              autoFocus
+              className="bg-zinc-900 text-white border-zinc-700"
+            />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Checkbox
+                  checked={isDownAlertEnabled}
+                  onCheckedChange={() => setIsDownAlertEnabled(prev => !prev)}
+                  className="accent-emerald-600"
+                />
+                Notify me when my website goes UP or DOWN
+              </Label>
+              <Label className="flex items-center gap-2">
+                <Checkbox
+                  checked={isHighPingAlertEnabled}
+                  onCheckedChange={() =>
+                    setIsHighPingAlertEnabled(prev => !prev)
+                  }
+                  className="accent-emerald-600"
+                />
+                Notify me when my website is responding with high ping
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleSaveEmail}
+              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={
+                isSaving ||
+                (!!email &&
+                  !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+                    email
+                  ))
+              }
+            >
+              {isSaving ? (
+                <>
+                  <Globe className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

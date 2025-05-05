@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "emailAlertQuota" INTEGER NOT NULL DEFAULT 5,
+ADD COLUMN     "emailAlertReset" TIMESTAMP(3) NOT NULL DEFAULT NOW() + INTERVAL '1 month';

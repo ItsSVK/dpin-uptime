@@ -20,7 +20,7 @@ on:
 
 env:
   SERVICE_NAME: hub
-  DOCKERFILE_PATH: ./apps/hub/Dockerfile
+  DOCKERFILE_PATH: ./docker/production/Dockerfile.hub
 
 jobs:
   build-and-deploy:
@@ -78,6 +78,7 @@ jobs:
               --network dpin-network \
               -p 8081:8081 \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              -e RESEND_API_KEY=${{ secrets.RESEND_API_KEY }} \
               --init \
               ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
             

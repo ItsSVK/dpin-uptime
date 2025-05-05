@@ -4,9 +4,13 @@ import { Website, WebsiteTick } from '@/types/website';
 import { prismaClient } from 'db/client';
 import { formatUrl } from '@/lib/url';
 import { getUserFromJWT } from '@/lib/auth';
-import { WebsiteStatus } from '@prisma/client';
+import { NotificationConfig, User, WebsiteStatus } from '@prisma/client';
 import { getUserBalance } from '@/actions/deposit';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import {
+  sendWebsitePingAnomalyEmail,
+  sendWebsiteStatusEmail,
+} from 'common/mail';
 
 interface Response<T> {
   success: boolean;
@@ -14,9 +18,18 @@ interface Response<T> {
   message?: string;
 }
 
-export async function getWebsite(
-  id: string
-): Promise<Response<Website & { ticks: WebsiteTick[] }>> {
+export async function getWebsite(id: string): Promise<
+  Response<
+    Website & {
+      ticks: WebsiteTick[];
+      notificationConfig: NotificationConfig;
+      user: {
+        emailAlertQuota: number;
+        emailAlertReset: Date;
+      };
+    }
+  >
+> {
   const user = await getUserFromJWT();
   if (!user) {
     return {
@@ -37,6 +50,17 @@ export async function getWebsite(
         },
       },
       uptimeHistory: true,
+      notificationConfig: {
+        where: {
+          userId: user.userId,
+        },
+      },
+      user: {
+        select: {
+          emailAlertQuota: true,
+          emailAlertReset: true,
+        },
+      },
     },
   });
 
@@ -49,12 +73,22 @@ export async function getWebsite(
 
   return {
     success: true,
-    data,
+    data: {
+      ...data,
+      notificationConfig: data.notificationConfig || {
+        email: null,
+        userId: user.userId,
+        websiteId: id,
+        isHighPingAlertEnabled: false,
+        isDownAlertEnabled: false,
+        createdAt: new Date(),
+      },
+    },
   };
 }
 
 export async function getWebsites(): Promise<
-  Response<(Website & { ticks: WebsiteTick[] })[]>
+  Response<(Website & { ticks: WebsiteTick[]; user: User })[]>
 > {
   const user = await getUserFromJWT();
   if (!user) {
@@ -73,6 +107,7 @@ export async function getWebsites(): Promise<
     },
     include: {
       ticks: true,
+      user: true,
     },
   });
 
@@ -96,10 +131,11 @@ export async function createWebsite(
     };
   }
 
-  if (userBalance.balance && userBalance.balance < 0.1 * LAMPORTS_PER_SOL) {
+  if (!userBalance.balance || userBalance.balance < 0.1 * LAMPORTS_PER_SOL) {
     return {
       success: false,
-      message: 'Insufficient balance',
+      message:
+        'Insufficient balance. Add more SOL to your balance to continue monitoring',
     };
   }
   const formattedUrl = formatUrl(url);
@@ -114,6 +150,15 @@ export async function createWebsite(
       checkFrequency,
       uptimePercentage: 100,
       monitoringSince: new Date(),
+      notificationConfig: {
+        create: {
+          userId: user.userId,
+          email: null,
+          isHighPingAlertEnabled: false,
+          isDownAlertEnabled: false,
+          createdAt: new Date(),
+        },
+      },
     },
   });
 
@@ -143,10 +188,11 @@ export async function updateWebsite(
     };
   }
 
-  if (userBalance.balance && userBalance.balance < 0.1 * LAMPORTS_PER_SOL) {
+  if (!userBalance.balance || userBalance.balance < 0.1 * LAMPORTS_PER_SOL) {
     return {
       success: false,
-      message: 'Add more SOL to your balance to continue monitoring',
+      message:
+        'Insufficient balance. Add more SOL to your balance to continue monitoring',
     };
   }
 
@@ -185,6 +231,12 @@ export async function deleteWebsite(ids: string[]): Promise<Response<void>> {
       }),
 
       prismaClient.uptimeHistory.deleteMany({
+        where: {
+          websiteId: { in: ids },
+        },
+      }),
+
+      prismaClient.notificationConfig.deleteMany({
         where: {
           websiteId: { in: ids },
         },
@@ -229,4 +281,92 @@ export async function hasActiveValidators(): Promise<Response<boolean>> {
       message: 'Failed to check if there are active validators',
     };
   }
+}
+
+export async function sendTestAlert(
+  websiteId: string
+): Promise<Response<void>> {
+  const user = await getUserFromJWT();
+  let alertCount = 0;
+  if (!user) {
+    return {
+      success: false,
+      message: 'Unauthorized',
+    };
+  }
+
+  const notificationConfig = await prismaClient.notificationConfig.findFirst({
+    where: {
+      userId: user.userId,
+      websiteId: websiteId,
+    },
+    include: {
+      website: true,
+      user: true,
+    },
+  });
+
+  if (!notificationConfig) {
+    return {
+      success: false,
+      message: 'Website not found',
+    };
+  }
+
+  if (!notificationConfig.email) {
+    return {
+      success: false,
+      message: 'Email is not set',
+    };
+  }
+
+  if (notificationConfig.user.emailAlertQuota <= 0) {
+    return {
+      success: false,
+      message: 'Email alert quota is out of limit',
+    };
+  }
+
+  let existingQuota = notificationConfig.user.emailAlertQuota;
+
+  if (notificationConfig.isDownAlertEnabled) {
+    await sendWebsiteStatusEmail({
+      to: notificationConfig.email,
+      websiteUrl: notificationConfig.website.url,
+      status: 'DOWN',
+      timestamp: new Date().toLocaleString(),
+    });
+    alertCount++;
+    existingQuota--;
+  }
+
+  if (existingQuota > 0 && notificationConfig.isHighPingAlertEnabled) {
+    await sendWebsitePingAnomalyEmail({
+      to: notificationConfig.email,
+      websiteUrl: notificationConfig.website.url,
+      region: 'US',
+      currentPing: 100,
+      averagePing: 50,
+      timestamp: new Date().toLocaleString(),
+    });
+    alertCount++;
+  }
+
+  await prismaClient.user.update({
+    where: {
+      id: user.userId,
+    },
+    data: {
+      emailAlertQuota: {
+        decrement: alertCount,
+      },
+      // emailAlertReset: {
+      //   set: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      // },
+    },
+  });
+
+  return {
+    success: true,
+  };
 }

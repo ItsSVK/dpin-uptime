@@ -7,13 +7,17 @@ import {
   verifySignature,
 } from 'common';
 import { Region } from '@prisma/client';
-import type { Validator } from '@prisma/client';
+import type { User, Validator } from '@prisma/client';
 import { WebsiteStatus, Prisma, UptimePeriod } from '@prisma/client';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { ValidatorManager } from './utils/validatorSelection';
 import { mapToRegion, isLocalhost } from './utils/region';
 import { prismaClient } from 'db/client';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import {
+  sendWebsiteStatusEmail,
+  sendWebsitePingAnomalyEmail,
+} from 'common/mail';
 
 const validatorManager = new ValidatorManager();
 const CALLBACKS: { [callbackId: string]: (data: IncomingMessage) => void } = {};
@@ -213,7 +217,10 @@ async function getGeoData(ip: string) {
     }
     throw new Error('Failed to get location data from primary provider');
   } catch (primaryError) {
-    console.error('Error with primary geo provider:', primaryError);
+    console.log(
+      'Error with primary geo provider:',
+      (primaryError as Error).message
+    );
 
     // Try secondary provider (geojs.io)
     try {
@@ -236,7 +243,10 @@ async function getGeoData(ip: string) {
         ip: ip,
       };
     } catch (secondaryError) {
-      console.error('Error with secondary geo provider:', secondaryError);
+      console.log(
+        'Error with secondary geo provider:',
+        (secondaryError as Error).message
+      );
 
       // Return default values if both providers fail
       return {
@@ -536,13 +546,26 @@ async function handleSignupMessage(
   }
 }
 
+// In-memory map to track last known status for each website
+const lastWebsiteStatus: Record<string, 'DOWN' | 'UP'> = {};
+// In-memory map to track recent pings by website and region
+const recentPings: Record<string, Record<string, number[]>> = {};
+const PING_HISTORY_LIMIT = 10; // Number of recent pings to keep per region
+const PING_ANOMALY_THRESHOLD = 2.5; // Notify if ping is 2.5x the average
+
 setInterval(async () => {
   const websitesToMonitorAll = await prismaClient.website.findMany({
     where: {
       isPaused: false,
+      user: {
+        currentBalance: {
+          gt: 0.1 * LAMPORTS_PER_SOL,
+        },
+      },
     },
     include: {
       user: true,
+      notificationConfig: true,
     },
   });
 
@@ -646,6 +669,89 @@ setInterval(async () => {
             statusArr.filter(v => v === b).length
         )
         .pop();
+
+      if (website.notificationConfig && website.notificationConfig.email) {
+        if (website.notificationConfig.isDownAlertEnabled) {
+          // --- EMAIL NOTIFICATION LOGIC ---
+          // Only notify for DOWN or UP (not DEGRADED)
+          let newStatus: 'DOWN' | 'UP' | null = null;
+          if (majorityStatus === WebsiteStatus.OFFLINE) newStatus = 'DOWN';
+          if (majorityStatus === WebsiteStatus.ONLINE) newStatus = 'UP';
+          if (newStatus) {
+            const prevStatus = lastWebsiteStatus[website.id];
+            if (prevStatus !== newStatus) {
+              // Send notification
+              if (website.user.emailAlertQuota > 0) {
+                await sendWebsiteStatusEmail({
+                  to: website.notificationConfig.email,
+                  websiteUrl: website.url,
+                  status: newStatus,
+                  timestamp: new Date().toLocaleString(),
+                });
+                await updateUserData(website.userId, {
+                  emailAlertQuota: website.user.emailAlertQuota - 1,
+                });
+              }
+              lastWebsiteStatus[website.id] = newStatus;
+            }
+          }
+          // --- END EMAIL NOTIFICATION LOGIC ---
+        }
+
+        if (website.notificationConfig.isHighPingAlertEnabled) {
+          // --- PING ANOMALY NOTIFICATION LOGIC ---
+          // Collect pings for this region
+          const regionKey = region.toString();
+          const websiteKey = website.id;
+          if (!recentPings[websiteKey]) recentPings[websiteKey] = {};
+          if (!recentPings[websiteKey][regionKey])
+            recentPings[websiteKey][regionKey] = [];
+          // Use only successful (ONLINE) pings for anomaly detection
+          const onlineResults = results.filter(({ result }) => {
+            const { error, total } = result.data;
+            return !error && typeof total === 'number';
+          });
+          if (onlineResults.length > 0) {
+            // Use the median ping for this check
+            const pings = onlineResults.map(({ result }) => result.data.total);
+            const sorted = [...pings].sort((a, b) => a - b);
+            const medianPing = sorted[Math.floor(sorted.length / 2)];
+            // Update history
+            recentPings[websiteKey][regionKey].push(medianPing);
+            if (
+              recentPings[websiteKey][regionKey].length > PING_HISTORY_LIMIT
+            ) {
+              recentPings[websiteKey][regionKey].shift();
+            }
+            // Calculate average (excluding current)
+            const history = recentPings[websiteKey][regionKey];
+            if (history.length >= PING_HISTORY_LIMIT) {
+              const avg =
+                history.slice(0, -1).reduce((a, b) => a + b, 0) /
+                (history.length - 1);
+              if (avg > 0 && medianPing > avg * PING_ANOMALY_THRESHOLD) {
+                // Send ping anomaly notification
+                if (website.user.emailAlertQuota > 0) {
+                  await sendWebsitePingAnomalyEmail({
+                    to: website.notificationConfig.email,
+                    websiteUrl: website.url,
+                    region: regionKey,
+                    currentPing: medianPing,
+                    averagePing: Math.round(avg),
+                    timestamp: new Date().toLocaleString(),
+                  });
+                  await updateUserData(website.userId, {
+                    emailAlertQuota: website.user.emailAlertQuota - 1,
+                  });
+                }
+                // Optionally, clear history to avoid spamming
+                recentPings[websiteKey][regionKey] = [];
+              }
+            }
+          }
+          // --- END PING ANOMALY NOTIFICATION LOGIC ---
+        }
+      }
 
       // Calculate payouts and total cost
       let totalValidatorPayout = 0;
@@ -823,4 +929,50 @@ function getClientIp(req: Request): string {
     realIp ||
     '0.0.0.0'
   );
+}
+
+setInterval(
+  async () => {
+    try {
+      const users = await prismaClient.user.findMany({
+        where: {
+          emailAlertReset: { lte: new Date() },
+        },
+      });
+
+      const now = new Date();
+      const nextReset = new Date(now);
+      nextReset.setMonth(now.getMonth() + 1);
+
+      for (const user of users) {
+        await prismaClient.user.update({
+          where: { id: user.id },
+          data: {
+            emailAlertQuota: 6,
+            emailAlertReset: {
+              set: nextReset,
+            },
+          },
+        });
+      }
+      console.log(
+        `[${new Date().toISOString()}] Quota reset for ${users.length} users.`
+      );
+    } catch (err) {
+      console.error(
+        `[${new Date().toISOString()}] Failed to reset quotas:`,
+        err
+      );
+    }
+  },
+  1000 * 60 * 30
+);
+
+export async function updateUserData(userId: string, data: Partial<User>) {
+  const updatedUser = await prismaClient.user.update({
+    where: { id: userId },
+    data: data,
+  });
+
+  return updatedUser;
 }

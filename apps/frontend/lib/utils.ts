@@ -39,3 +39,5 @@ export async function getParsedTransferDetails(txSignature: string) {
 
   return { success: true, data: { transfers } };
 }
+
+export const RESEND_API_KEY = process.env.RESEND_API_KEY;

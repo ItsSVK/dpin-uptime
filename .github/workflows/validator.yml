@@ -20,7 +20,7 @@ on:
 
 env:
   SERVICE_NAME: validator
-  DOCKERFILE_PATH: ./apps/validator/Dockerfile
+  DOCKERFILE_PATH: ./docker/production/Dockerfile.validator
 
 jobs:
   build-and-deploy:

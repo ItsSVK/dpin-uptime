@@ -20,4 +20,8 @@ export interface ProcessedWebsite extends Website {
     totalIncidents: number;
     totalDowntime: number;
   }[];
+  user: {
+    emailAlertQuota: number;
+    emailAlertReset: Date;
+  };
 }

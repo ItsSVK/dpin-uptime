@@ -102,6 +102,7 @@ export function WebsiteAddOrUpdateDialog({
       router.refresh();
     } else {
       setValidationError(response.message || 'Failed to add website');
+      setIsValidating(false);
     }
   };
 
@@ -150,9 +151,9 @@ export function WebsiteAddOrUpdateDialog({
                     try {
                       const urlObj = new URL(e.target.value);
                       setName(urlObj.hostname);
+                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     } catch (e) {
                       // Invalid URL, ignore
-                      console.error(e);
                     }
                   }
                 }}

@@ -11,6 +11,10 @@ export function processWebsiteData(
       totalIncidents: number;
       totalDowntime: number;
     }[];
+    user: {
+      emailAlertQuota: number;
+      emailAlertReset: Date;
+    };
   }
 ): ProcessedWebsite {
   // Sort ticks by creation time
@@ -81,6 +85,7 @@ export function processWebsiteData(
     uptimeTicks: windows,
     ticks: sortedTicks,
     uptimeHistory: website.uptimeHistory,
+    user: website.user,
   };
 }
 

@@ -5,6 +5,16 @@ export function Footer() {
         <div className="flex items-center gap-1 text-zinc-500">
           <p className="text-center text-sm leading-loose">
             © {new Date().getFullYear()} DPIN Uptime. All rights reserved.
+            <br />
+            Crafted with Care by{' '}
+            <a
+              href="https://itssvk.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-500 hover:text-zinc-400 transition-colors"
+            >
+              SVK
+            </a>
           </p>
         </div>
       </div>
