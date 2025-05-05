@@ -9,6 +9,7 @@ on:
       - 'package.json'
       - 'bun.lockb'
       - '.github/workflows/hub.yml'
+      - 'docker/production/Dockerfile.hub'
   pull_request:
     branches: [main]
     paths:
@@ -17,7 +18,7 @@ on:
       - 'package.json'
       - 'bun.lockb'
       - '.github/workflows/hub.yml'
-
+      - 'docker/production/Dockerfile.hub'
 env:
   SERVICE_NAME: hub
   DOCKERFILE_PATH: ./docker/production/Dockerfile.hub

@@ -50,12 +50,6 @@ RUN echo '#!/bin/sh' > start.sh && \
     echo '    exit 1' >> start.sh && \
     echo 'fi' >> start.sh && \
     echo '' >> start.sh && \
-    echo '# Validate HUB_URL' >> start.sh && \
-    echo 'if [ -z "$HUB_URL" ]; then' >> start.sh && \
-    echo '    echo "Error: HUB_URL is not set"' >> start.sh && \
-    echo '    exit 1' >> start.sh && \
-    echo 'fi' >> start.sh && \
-    echo '' >> start.sh && \
     echo '# Start the application' >> start.sh && \
     echo 'exec bun ./dist/index.js' >> start.sh && \
     chmod +x start.sh && \

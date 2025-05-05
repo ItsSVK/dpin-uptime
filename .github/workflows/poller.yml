@@ -9,6 +9,7 @@ on:
       - 'package.json'
       - 'bun.lockb'
       - '.github/workflows/poller.yml'
+      - 'docker/production/Dockerfile.poller'
   pull_request:
     branches: [main]
     paths:
@@ -17,7 +18,7 @@ on:
       - 'package.json'
       - 'bun.lockb'
       - '.github/workflows/poller.yml'
-
+      - 'docker/production/Dockerfile.poller'
 env:
   SERVICE_NAME: poller
   DOCKERFILE_PATH: ./docker/production/Dockerfile.poller

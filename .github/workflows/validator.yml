@@ -9,6 +9,7 @@ on:
       - 'package.json'
       - 'bun.lockb'
       - '.github/workflows/validator.yml'
+      - 'docker/production/Dockerfile.validator'
   pull_request:
     branches: [main]
     paths:
@@ -17,7 +18,7 @@ on:
       - 'package.json'
       - 'bun.lockb'
       - '.github/workflows/validator.yml'
-
+      - 'docker/production/Dockerfile.validator'
 env:
   SERVICE_NAME: validator
   DOCKERFILE_PATH: ./docker/production/Dockerfile.validator
