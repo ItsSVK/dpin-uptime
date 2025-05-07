@@ -17,7 +17,7 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import {
   sendWebsiteStatusEmail,
   sendWebsitePingAnomalyEmail,
-} from 'common/mail';
+} from 'common/node-mail';
 
 const validatorManager = new ValidatorManager();
 const CALLBACKS: { [callbackId: string]: (data: IncomingMessage) => void } = {};

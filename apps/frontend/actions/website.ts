@@ -10,7 +10,7 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import {
   sendWebsitePingAnomalyEmail,
   sendWebsiteStatusEmail,
-} from 'common/mail';
+} from 'common/node-mail';
 
 interface Response<T> {
   success: boolean;
