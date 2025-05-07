@@ -314,6 +314,9 @@ export function WebsiteListTable({ websites }: WebsiteListTableProps) {
                       url: website.url,
                       name: website.name,
                       checkFrequency: website.checkFrequency.toString(),
+                      preferredRegion: website.preferredRegion
+                        ? (website.preferredRegion as import('@prisma/client').Region)
+                        : null,
                     }}
                   >
                     <Button

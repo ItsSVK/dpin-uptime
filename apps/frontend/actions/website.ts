@@ -120,7 +120,8 @@ export async function getWebsites(): Promise<
 export async function createWebsite(
   url: string,
   urlName: string,
-  checkFrequency: number
+  checkFrequency: number,
+  preferredRegion?: string
 ): Promise<Response<Website>> {
   const user = await getUserFromJWT();
   const userBalance = await getUserBalance();
@@ -150,6 +151,7 @@ export async function createWebsite(
       checkFrequency,
       uptimePercentage: 100,
       monitoringSince: new Date(),
+      preferredRegion: preferredRegion || undefined,
       notificationConfig: {
         create: {
           userId: user.userId,

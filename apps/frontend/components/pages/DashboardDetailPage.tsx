@@ -10,6 +10,7 @@ import {
   Phone,
   SendHorizonal,
   Slack,
+  Info,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -267,6 +268,26 @@ export default function DashboardDetailPage({ id }: { id: string }) {
           >
             <div className="flex">
               <div className="flex-shrink-0">
+                <Info className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div className="ml-3">
+                <p className={`text-sm text-emerald-200`}>
+                  For testing purposes, currently all emails are sent through
+                  Gmail only - please check your spam folder if not received in
+                  your inbox.
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* <div
+            className={`bg-${
+              website.user.emailAlertQuota === 0 ? 'amber' : 'emerald'
+            }-900/20 border-l-4 border-${
+              website.user.emailAlertQuota === 0 ? 'amber' : 'emerald'
+            }-500 p-2 rounded-md backdrop-blur-sm`}
+          >
+            <div className="flex">
+              <div className="flex-shrink-0">
                 {website.user.emailAlertQuota === 0 ? (
                   <AlertCircle className="h-5 w-5 text-amber-500" />
                 ) : (
@@ -285,7 +306,7 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
           <Card className="border-zinc-800 bg-zinc-950">
             <CardHeader>
               <CardTitle>Notification Settings</CardTitle>

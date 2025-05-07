@@ -3,7 +3,7 @@
 import type React from 'react';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Globe } from 'lucide-react';
+import { AlertTriangle, Globe, X as LucideX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,17 +26,54 @@ import {
 import { createWebsite, updateWebsite } from '@/actions/website';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Region } from '@prisma/client';
 
 interface AddOrUpdateWebsiteProps {
   id: string;
   url: string;
   name: string;
   checkFrequency: string;
+  preferredRegion?: Region | null;
 }
+
 interface WebsiteAddOrUpdateDialogProps {
   children: React.ReactNode;
   data?: AddOrUpdateWebsiteProps;
 }
+
+// Helper for user-friendly region names
+const REGION_LABELS: Record<Region, string> = {
+  US_EAST: 'US East',
+  US_WEST: 'US West',
+  US_CENTRAL: 'US Central',
+  CANADA_EAST: 'Canada East',
+  CANADA_WEST: 'Canada West',
+  EUROPE_WEST: 'Europe West',
+  EUROPE_EAST: 'Europe East',
+  EUROPE_NORTH: 'Europe North',
+  EUROPE_SOUTH: 'Europe South',
+  INDIA: 'India',
+  JAPAN: 'Japan',
+  SOUTH_KOREA: 'South Korea',
+  TAIWAN: 'Taiwan',
+  CHINA_MAINLAND: 'China Mainland',
+  HONG_KONG: 'Hong Kong',
+  SINGAPORE: 'Singapore',
+  SOUTHEAST_ASIA: 'Southeast Asia',
+  AUSTRALIA: 'Australia',
+  OCEANIA: 'Oceania',
+  BRAZIL: 'Brazil',
+  SOUTH_AMERICA_WEST: 'South America West',
+  SOUTH_AMERICA_EAST: 'South America East',
+  MEXICO: 'Mexico',
+  CENTRAL_AMERICA: 'Central America',
+  SOUTH_AFRICA: 'South Africa',
+  AFRICA_NORTH: 'Africa North',
+  AFRICA_WEST: 'Africa West',
+  AFRICA_EAST: 'Africa East',
+  MIDDLE_EAST: 'Middle East',
+  RUSSIA: 'Russia',
+};
 
 export function WebsiteAddOrUpdateDialog({
   children,
@@ -48,6 +85,7 @@ export function WebsiteAddOrUpdateDialog({
   const [checkFrequency, setCheckFrequency] = useState('60');
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [preferredRegion, setPreferredRegion] = useState<Region | null>(null);
   const router = useRouter();
   const regex =
     /^(https?:\/\/)(www\.)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?$/;
@@ -58,6 +96,7 @@ export function WebsiteAddOrUpdateDialog({
       setUrl(data.url);
       setName(data.name);
       setCheckFrequency(data.checkFrequency);
+      setPreferredRegion(data.preferredRegion || null);
     }
   }, [data]);
 
@@ -90,8 +129,14 @@ export function WebsiteAddOrUpdateDialog({
           url,
           name,
           checkFrequency: parseInt(checkFrequency),
+          preferredRegion: preferredRegion || undefined,
         })
-      : await createWebsite(url, name, parseInt(checkFrequency));
+      : await createWebsite(
+          url,
+          name,
+          parseInt(checkFrequency),
+          preferredRegion || undefined
+        );
 
     if (response.success) {
       setIsValidating(false);
@@ -195,8 +240,40 @@ export function WebsiteAddOrUpdateDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
+            <div className="grid gap-2">
+              <Label htmlFor="preferred-region">Preferred Region</Label>
+              <div className="relative">
+                <Select
+                  value={preferredRegion || '__none__'}
+                  onValueChange={value =>
+                    setPreferredRegion(
+                      value === '__none__' ? null : (value as Region)
+                    )
+                  }
+                >
+                  <SelectTrigger
+                    id="preferred-region"
+                    className="w-full border-zinc-800 bg-zinc-900"
+                  >
+                    <SelectValue placeholder="Select region (optional)" />
+                  </SelectTrigger>
+                  <SelectContent className="w-full border-zinc-800 bg-zinc-950 max-h-60 overflow-y-auto">
+                    <SelectItem value="__none__">No Preference</SelectItem>
+                    {Object.values(Region).map(region => (
+                      <SelectItem key={region} value={region}>
+                        {REGION_LABELS[region] || region}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-zinc-500 italic">
+                Note: Only select a preferred region if required - as validation
+                may fail if no active validators are available in that region.
+              </p>
+            </div>
+          </div>
           <DialogFooter>
             <Button
               type="button"
