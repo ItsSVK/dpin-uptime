@@ -3,7 +3,7 @@
 import type React from 'react';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Globe, X as LucideX } from 'lucide-react';
+import { AlertTriangle, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

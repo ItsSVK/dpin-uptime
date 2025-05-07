@@ -1,9 +1,7 @@
 'use client';
 import {
   ArrowLeft,
-  CheckCircle,
   ExternalLink,
-  AlertCircle,
   Globe,
   Link2,
   Mail,
