@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ProcessedWebsite } from '@/types/website';
-import { Region } from '@prisma/client';
+import { Region, WebsiteTick } from '@prisma/client';
 import { startOfHour, subHours, format } from 'date-fns';
 
 interface ResponseTimeChartProps {
@@ -351,42 +351,46 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
   );
 }
 
-function TooltipCard({ tick }: { tick: any }) {
+function TooltipCard({ tick }: { tick: WebsiteTick }) {
   // Color logic for ping
   let pingColor = '#10b981'; // green
-  if (tick.total > 500)
+  if (tick.total && tick.total > 500)
     pingColor = '#ef4444'; // red
-  else if (tick.total > 200) pingColor = '#f59e0b'; // orange
+  else if (tick.total && tick.total > 200) pingColor = '#f59e0b'; // orange
 
   // Color logic for TTFB
   let ttfbColor = '#10b981'; // green
-  if (tick.ttfb > 500)
+  if (tick.ttfb && tick.ttfb > 500)
     ttfbColor = '#ef4444'; // red
-  else if (tick.ttfb > 200) ttfbColor = '#f59e0b'; // orange
+  else if (tick.ttfb && tick.ttfb > 200) ttfbColor = '#f59e0b'; // orange
 
   // Color logic for Data Transfer
   let dataTransferColor = '#10b981'; // green
-  if (tick.dataTransfer > 500)
+  if (tick.dataTransfer && tick.dataTransfer > 500)
     dataTransferColor = '#ef4444'; // red
-  else if (tick.dataTransfer > 200) dataTransferColor = '#f59e0b'; // orange
+  else if (tick.dataTransfer && tick.dataTransfer > 200)
+    dataTransferColor = '#f59e0b'; // orange
 
   // Color logic for TLS Handshake
   let tlsHandshakeColor = '#10b981'; // green
-  if (tick.tlsHandshake > 500)
+  if (tick.tlsHandshake && tick.tlsHandshake > 500)
     tlsHandshakeColor = '#ef4444'; // red
-  else if (tick.tlsHandshake > 200) tlsHandshakeColor = '#f59e0b'; // orange
+  else if (tick.tlsHandshake && tick.tlsHandshake > 200)
+    tlsHandshakeColor = '#f59e0b'; // orange
 
   // Color logic for Connection
   let connectionColor = '#10b981'; // green
-  if (tick.connection > 500)
+  if (tick.connection && tick.connection > 500)
     connectionColor = '#ef4444'; // red
-  else if (tick.connection > 200) connectionColor = '#f59e0b'; // orange
+  else if (tick.connection && tick.connection > 200)
+    connectionColor = '#f59e0b'; // orange
 
   // Color logic for Name Lookup
   let nameLookupColor = '#10b981'; // green
-  if (tick.nameLookup > 500)
+  if (tick.nameLookup && tick.nameLookup > 500)
     nameLookupColor = '#ef4444'; // red
-  else if (tick.nameLookup > 200) nameLookupColor = '#f59e0b'; // orange
+  else if (tick.nameLookup && tick.nameLookup > 200)
+    nameLookupColor = '#f59e0b'; // orange
 
   return (
     <div
@@ -474,7 +478,7 @@ function TooltipPositioner({
     const parentRect = parent.getBoundingClientRect();
     const tooltipWidth = 320; // maxWidth
     let left = mouseX + 4; // closer to pointer
-    let top = mouseY - 8; // slightly above pointer
+    const top = mouseY - 8; // slightly above pointer
     let dir: 'left' | 'right' = 'right';
     // If tooltip would overflow right, show to the left
     if (mouseX + 4 + tooltipWidth > parentRect.width) {

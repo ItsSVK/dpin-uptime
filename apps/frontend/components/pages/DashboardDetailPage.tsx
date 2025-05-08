@@ -104,7 +104,7 @@ export default function DashboardDetailPage({ id }: { id: string }) {
     return () => {
       clearInterval(interval);
     };
-  }, [id]);
+  }, [id, router]);
 
   const handleNotificationChange = (type: keyof typeof notifications) => {
     if (type === 'email') {
