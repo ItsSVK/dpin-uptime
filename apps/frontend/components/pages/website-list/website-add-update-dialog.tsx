@@ -270,7 +270,8 @@ export function WebsiteAddOrUpdateDialog({
               </div>
               <p className="text-xs text-zinc-500 italic">
                 Note: Only select a preferred region if required - as validation
-                may fail if no active validators are available in that region.
+                may fail if no active validators are available in that selected
+                region.
               </p>
             </div>
           </div>

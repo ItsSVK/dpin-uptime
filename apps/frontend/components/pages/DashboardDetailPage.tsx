@@ -93,6 +93,9 @@ export default function DashboardDetailPage({ id }: { id: string }) {
         setIsDownAlertEnabled(
           response.data.notificationConfig.isDownAlertEnabled
         );
+      } else {
+        toast.error(response.message || 'Failed to fetch website');
+        router.push('/dashboard');
       }
     };
     fetchWebsite();

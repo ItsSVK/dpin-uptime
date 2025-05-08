@@ -80,6 +80,9 @@ function SignInButtonContent() {
 
       const signature = await signMessage(message);
 
+      console.log('Signature:', JSON.stringify(Array.from(signature)));
+      console.log('Public key:', publicKey.toBase58());
+
       const user = await verifySignatureAndUpsertUser(
         JSON.stringify(Array.from(signature)),
         publicKey.toBase58()
@@ -113,7 +116,7 @@ function SignInButtonContent() {
         onClick={handleSignIn}
         disabled={signing}
         variant="outline"
-        className="hidden sm:flex"
+        className="hidden sm:flex cursor-pointer"
       >
         {signing
           ? 'Signing...'

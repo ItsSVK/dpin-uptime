@@ -27,7 +27,7 @@ export function WebsiteListHeader({ balance }: { balance: number }) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="flex items-center gap-2">
-                <Link href="/deposits">
+                <Link href="/dashboard/deposits">
                   <Button
                     variant="outline"
                     size="sm"

@@ -116,7 +116,7 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {pathname === '/' ? (
+          {!pathname.startsWith('/dashboard') ? (
             <SignInButton />
           ) : (
             <WalletMultiButton className="wallet-adapter-button" />
