@@ -260,13 +260,14 @@ export default function DashboardDetailPage({ id }: { id: string }) {
           </div>
         </TabsContent>
         <TabsContent value="settings" className="space-y-4 pt-4">
-          <div
+          {/* <div
             className={`bg-${
               website.user.emailAlertQuota === 0 ? 'amber' : 'emerald'
             }-900/20 border-l-4 border-${
               website.user.emailAlertQuota === 0 ? 'amber' : 'emerald'
             }-500 p-2 rounded-md backdrop-blur-sm`}
-          >
+          > */}
+          <div className="bg-emerald-900/20 border-l-4 border-emerald-500 p-2 rounded-md backdrop-blur-sm">
             <div className="flex">
               <div className="flex-shrink-0">
                 <Info className="h-5 w-5 text-emerald-500" />

@@ -337,37 +337,194 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
         <div className="h-[300px] w-full relative">
           <canvas ref={canvasRef} className="h-full w-full" />
           {hoveredDot && (
-            <div
-              style={{
-                position: 'absolute',
-                left: hoveredDot.mouseX + 10,
-                top: hoveredDot.mouseY + 10,
-                pointerEvents: 'none',
-                zIndex: 10,
-                background: '#18181b',
-                color: '#fff',
-                border: '1px solid #27272a',
-                borderRadius: 8,
-                padding: '8px 12px',
-                fontSize: 12,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                minWidth: 120,
-                maxWidth: 220,
-                whiteSpace: 'normal',
-              }}
+            <TooltipPositioner
+              mouseX={hoveredDot.mouseX}
+              mouseY={hoveredDot.mouseY}
+              parentRef={canvasRef}
             >
-              <div>
-                <strong>
-                  {format(new Date(hoveredDot.tick.createdAt), 'PPpp')}
-                </strong>
-              </div>
-              <div>Ping: {hoveredDot.tick.total} ms</div>
-              <div>Region: {hoveredDot.tick.region}</div>
-              {/* Add more details as needed */}
-            </div>
+              <TooltipCard tick={hoveredDot.tick} />
+            </TooltipPositioner>
           )}
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function TooltipCard({ tick }: { tick: any }) {
+  // Color logic for ping
+  let pingColor = '#10b981'; // green
+  if (tick.total > 500)
+    pingColor = '#ef4444'; // red
+  else if (tick.total > 200) pingColor = '#f59e0b'; // orange
+
+  // Color logic for TTFB
+  let ttfbColor = '#10b981'; // green
+  if (tick.ttfb > 500)
+    ttfbColor = '#ef4444'; // red
+  else if (tick.ttfb > 200) ttfbColor = '#f59e0b'; // orange
+
+  // Color logic for Data Transfer
+  let dataTransferColor = '#10b981'; // green
+  if (tick.dataTransfer > 500)
+    dataTransferColor = '#ef4444'; // red
+  else if (tick.dataTransfer > 200) dataTransferColor = '#f59e0b'; // orange
+
+  // Color logic for TLS Handshake
+  let tlsHandshakeColor = '#10b981'; // green
+  if (tick.tlsHandshake > 500)
+    tlsHandshakeColor = '#ef4444'; // red
+  else if (tick.tlsHandshake > 200) tlsHandshakeColor = '#f59e0b'; // orange
+
+  // Color logic for Connection
+  let connectionColor = '#10b981'; // green
+  if (tick.connection > 500)
+    connectionColor = '#ef4444'; // red
+  else if (tick.connection > 200) connectionColor = '#f59e0b'; // orange
+
+  // Color logic for Name Lookup
+  let nameLookupColor = '#10b981'; // green
+  if (tick.nameLookup > 500)
+    nameLookupColor = '#ef4444'; // red
+  else if (tick.nameLookup > 200) nameLookupColor = '#f59e0b'; // orange
+
+  return (
+    <div
+      style={{
+        background: '#18181b',
+        color: '#fff',
+        border: '1px solid #27272a',
+        borderRadius: 8,
+        padding: '10px 16px',
+        fontSize: 13,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+        minWidth: 180,
+        maxWidth: 320,
+        whiteSpace: 'normal',
+        pointerEvents: 'none',
+        zIndex: 10,
+        position: 'relative',
+      }}
+    >
+      <div>
+        <strong>{format(new Date(tick.createdAt), 'PPpp')}</strong>
+      </div>
+      <div>
+        Ping:{' '}
+        <span style={{ color: pingColor, fontWeight: 600 }}>
+          {tick.total} ms
+        </span>
+      </div>
+      <div>
+        TTFB:{' '}
+        <span style={{ color: ttfbColor, fontWeight: 600 }}>
+          {tick.ttfb} ms
+        </span>
+      </div>
+      <div>
+        Data Transfer:{' '}
+        <span style={{ color: dataTransferColor, fontWeight: 600 }}>
+          {tick.dataTransfer} ms
+        </span>
+      </div>
+      <div>
+        TLS Handshake:{' '}
+        <span style={{ color: tlsHandshakeColor, fontWeight: 600 }}>
+          {tick.tlsHandshake} ms
+        </span>
+      </div>
+      <div>
+        Connection:{' '}
+        <span style={{ color: connectionColor, fontWeight: 600 }}>
+          {tick.connection} ms
+        </span>
+      </div>
+      <div>
+        Name Lookup:{' '}
+        <span style={{ color: nameLookupColor, fontWeight: 600 }}>
+          {tick.nameLookup} ms
+        </span>
+      </div>
+      <div>
+        Region:{' '}
+        <span style={{ color: '#10b981', fontWeight: 600 }}>{tick.region}</span>
+      </div>
+    </div>
+  );
+}
+
+function TooltipPositioner({
+  mouseX,
+  mouseY,
+  parentRef,
+  children,
+}: {
+  mouseX: number;
+  mouseY: number;
+  parentRef: React.RefObject<HTMLCanvasElement | null>;
+  children: React.ReactNode;
+}) {
+  const [style, setStyle] = useState<React.CSSProperties>({});
+  const [arrowDir, setArrowDir] = useState<'left' | 'right'>('right');
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const parent = parentRef.current?.parentElement;
+    if (!parent) return;
+    const parentRect = parent.getBoundingClientRect();
+    const tooltipWidth = 320; // maxWidth
+    let left = mouseX + 4; // closer to pointer
+    let top = mouseY - 8; // slightly above pointer
+    let dir: 'left' | 'right' = 'right';
+    // If tooltip would overflow right, show to the left
+    if (mouseX + 4 + tooltipWidth > parentRect.width) {
+      left = mouseX - tooltipWidth - 4;
+      dir = 'left';
+    }
+    // Prevent going off the left edge
+    if (left < 0) left = 0;
+    setArrowDir(dir);
+    setStyle({
+      left,
+      top,
+      position: 'absolute',
+      pointerEvents: 'none',
+      zIndex: 10,
+    });
+  }, [mouseX, mouseY, parentRef]);
+
+  return (
+    <div ref={tooltipRef} style={style}>
+      {arrowDir === 'right' ? (
+        <span
+          style={{
+            position: 'absolute',
+            left: -8,
+            top: 18,
+            width: 0,
+            height: 0,
+            borderTop: '7px solid transparent',
+            borderBottom: '7px solid transparent',
+            borderRight: '8px solid #18181b',
+            zIndex: 11,
+          }}
+        />
+      ) : (
+        <span
+          style={{
+            position: 'absolute',
+            right: -8,
+            top: 18,
+            width: 0,
+            height: 0,
+            borderTop: '7px solid transparent',
+            borderBottom: '7px solid transparent',
+            borderLeft: '8px solid #18181b',
+            zIndex: 11,
+          }}
+        />
+      )}
+      {children}
+    </div>
   );
 }

@@ -19,7 +19,7 @@ model User {
   email              String?
   walletAddress      String               @unique
   currentBalance     Float                @default(0) // in SOL
-  emailAlertQuota    Int                  @default(10)
+  emailAlertQuota    Int                  @default(200)
   emailAlertReset    DateTime             @default(dbgenerated("NOW() + INTERVAL '1 day'"))
   websites           Website[]
   transactions       Transaction[]
