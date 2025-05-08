@@ -28,6 +28,13 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [timeRange, setTimeRange] = useState('Last 24 hours');
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
+  const [hoveredDot, setHoveredDot] = useState<null | {
+    x: number;
+    y: number;
+    tick: (typeof website.ticks)[0];
+    mouseX: number;
+    mouseY: number;
+  }>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -80,6 +87,9 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
       const date = subHours(new Date(), hours - 1 - i);
       return format(date, 'HH:mm');
     });
+
+    // Store dot coordinates and tick data for hover detection
+    const dotPoints: { x: number; y: number; tick: (typeof ticks)[0] }[] = [];
 
     // Draw chart
     const drawChart = () => {
@@ -149,6 +159,17 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, Math.PI * 2);
         ctx.fill();
+
+        // Store dot info for hover detection
+        const hourStart = startOfHour(subHours(new Date(), hours - 1 - index));
+        const hourEnd = subHours(hourStart, -1);
+        const hourTicks = ticks.filter(tick => {
+          const tickDate = new Date(tick.createdAt);
+          return tickDate >= hourStart && tickDate < hourEnd;
+        });
+        if (hourTicks.length > 0) {
+          dotPoints.push({ x, y, tick: hourTicks[0] });
+        }
       });
 
       // Stroke the line
@@ -204,17 +225,39 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
 
     drawChart();
 
+    // Mouse event handlers for tooltip
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const radius = 6; // px
+      for (const point of dotPoints) {
+        if (
+          Math.abs(mouseX - point.x) < radius &&
+          Math.abs(mouseY - point.y) < radius
+        ) {
+          setHoveredDot({ ...point, mouseX, mouseY });
+          return;
+        }
+      }
+      setHoveredDot(null);
+    };
+    const handleMouseLeave = () => setHoveredDot(null);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseleave', handleMouseLeave);
+
     // Redraw on window resize
     const handleResize = () => {
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
       drawChart();
     };
-
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, [timeRange, website.ticks, selectedRegion]);
 
@@ -291,8 +334,38 @@ export function ResponseTimeChart({ website }: ResponseTimeChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] w-full">
+        <div className="h-[300px] w-full relative">
           <canvas ref={canvasRef} className="h-full w-full" />
+          {hoveredDot && (
+            <div
+              style={{
+                position: 'absolute',
+                left: hoveredDot.mouseX + 10,
+                top: hoveredDot.mouseY + 10,
+                pointerEvents: 'none',
+                zIndex: 10,
+                background: '#18181b',
+                color: '#fff',
+                border: '1px solid #27272a',
+                borderRadius: 8,
+                padding: '8px 12px',
+                fontSize: 12,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                minWidth: 120,
+                maxWidth: 220,
+                whiteSpace: 'normal',
+              }}
+            >
+              <div>
+                <strong>
+                  {format(new Date(hoveredDot.tick.createdAt), 'PPpp')}
+                </strong>
+              </div>
+              <div>Ping: {hoveredDot.tick.total} ms</div>
+              <div>Region: {hoveredDot.tick.region}</div>
+              {/* Add more details as needed */}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
