@@ -2,11 +2,9 @@ import type React from 'react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { WalletProvider } from '@/components/providers/WalletProvider';
-import '@solana/wallet-adapter-react-ui/styles.css';
 import { Navbar } from '@/components/navbar';
-import { Toaster } from 'sonner';
 import { LayoutWraper } from '@/components/pages/LayoutWraper';
+import Provider from '@/providers/provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,13 +21,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-black text-white`}>
-        <WalletProvider>
+        <Provider>
           <div className="flex min-h-screen flex-col bg-black text-white">
             <Navbar />
             <LayoutWraper>{children}</LayoutWraper>
           </div>
-        </WalletProvider>
-        <Toaster position="top-right" richColors />
+        </Provider>
       </body>
     </html>
   );

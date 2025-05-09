@@ -9,6 +9,9 @@ import {
   SendHorizonal,
   Slack,
   Info,
+  Copy,
+  CheckIcon,
+  CopyIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -32,18 +35,7 @@ import {
 } from '@/actions/website';
 import { processWebsiteData } from '@/lib/websiteUtils';
 import { ProcessedWebsite } from '@/types/website';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { updateNotificationConfig } from '@/actions/user';
-import { NotificationConfig } from '@prisma/client';
+import { NotificationConfig } from '@/types/notification';
 import { useRouter } from 'next/navigation';
 import {
   Tooltip,
@@ -52,32 +44,30 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import NotificationUpdateDialog from '@/components/pages/notification-update-dialog';
 
 export default function DashboardDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const [website, setWebsite] = useState<ProcessedWebsite | null>(null);
   const [hasActiveValidator, setHasActiveValidator] = useState(false);
+
   const [notificationConfig, setNotificationConfig] =
     useState<NotificationConfig>({
-      email: '',
+      email: null,
+      webhookUrl: null,
+      webhookSecret: null,
       isHighPingAlertEnabled: false,
       isDownAlertEnabled: false,
-      userId: '',
-      createdAt: new Date(),
-      websiteId: '',
     });
   const [notifications, setNotifications] = useState({
     email: notificationConfig.email !== null,
     sms: false,
     slack: false,
-    webhook: false,
+    webhook: !!notificationConfig.webhookUrl,
   });
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [isHighPingAlertEnabled, setIsHighPingAlertEnabled] = useState(false);
-  const [isDownAlertEnabled, setIsDownAlertEnabled] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [handleModalOpen, setHandleModalOpen] = useState(false);
   const [isSendingTestAlert, setIsSendingTestAlert] = useState(false);
+
   useEffect(() => {
     const fetchWebsite = async () => {
       const response = await getWebsite(id);
@@ -86,13 +76,6 @@ export default function DashboardDetailPage({ id }: { id: string }) {
         setWebsite(processWebsiteData(response.data));
         setHasActiveValidator(hasActiveValidatorResponse.data || false);
         setNotificationConfig(response.data.notificationConfig);
-        setEmail(response.data.notificationConfig.email || '');
-        setIsHighPingAlertEnabled(
-          response.data.notificationConfig.isHighPingAlertEnabled
-        );
-        setIsDownAlertEnabled(
-          response.data.notificationConfig.isDownAlertEnabled
-        );
       } else {
         toast.error(response.message || 'Failed to fetch website');
         router.push('/dashboard');
@@ -105,42 +88,6 @@ export default function DashboardDetailPage({ id }: { id: string }) {
       clearInterval(interval);
     };
   }, [id, router]);
-
-  const handleNotificationChange = (type: keyof typeof notifications) => {
-    if (type === 'email') {
-      setEmailModalOpen(true);
-      return;
-    } else {
-      setNotifications(prev => ({ ...prev, [type]: !prev[type] }));
-    }
-  };
-
-  // const handleAlertOptionChange = (type: keyof typeof notificationConfig) => {
-  //   setNotificationConfig(prev => ({ ...prev, [type]: !prev[type] }));
-  // };
-
-  const handleSaveEmail = async () => {
-    setIsSaving(true);
-    // setNotifications(prev => ({ ...prev, email: true }));
-    // TODO: Persist email and alertOptions to backend
-    await updateNotificationConfig({
-      websiteId: id,
-      isHighPingAlertEnabled,
-      isDownAlertEnabled,
-      email,
-    });
-
-    toast.success('Notification settings saved');
-    setIsSaving(false);
-    setEmailModalOpen(false);
-    setNotificationConfig({
-      ...notificationConfig,
-      email,
-      isHighPingAlertEnabled,
-      isDownAlertEnabled,
-    });
-    router.refresh();
-  };
 
   const handleSendTestAlert = async () => {
     if (isSendingTestAlert) {
@@ -161,13 +108,6 @@ export default function DashboardDetailPage({ id }: { id: string }) {
       router.refresh();
       setIsSendingTestAlert(false);
     }
-  };
-
-  const handleCloseModal = () => {
-    setEmailModalOpen(false);
-    setEmail(notificationConfig.email || '');
-    setIsHighPingAlertEnabled(notificationConfig.isHighPingAlertEnabled);
-    setIsDownAlertEnabled(notificationConfig.isDownAlertEnabled);
   };
 
   if (!website) {
@@ -388,7 +328,7 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                           (notificationConfig.isDownAlertEnabled ||
                             notificationConfig.isHighPingAlertEnabled)
                         }
-                        onChange={() => handleNotificationChange('email')}
+                        onChange={() => setHandleModalOpen(true)}
                         className="peer sr-only"
                       />
                       <div className="peer h-6 w-11 rounded-full bg-zinc-700 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
@@ -416,7 +356,7 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                       <input
                         type="checkbox"
                         checked={notifications.sms}
-                        onChange={() => handleNotificationChange('sms')}
+                        onChange={() => setHandleModalOpen(true)}
                         className="peer sr-only"
                       />
                       <div className="peer h-6 w-11 rounded-full bg-zinc-700 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
@@ -443,7 +383,7 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                       <input
                         type="checkbox"
                         checked={notifications.slack}
-                        onChange={() => handleNotificationChange('slack')}
+                        onChange={() => setHandleModalOpen(true)}
                         className="peer sr-only"
                       />
                       <div className="peer h-6 w-11 rounded-full bg-zinc-700 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
@@ -459,104 +399,98 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium">Webhook</h3>
-                        <p className="text-sm text-zinc-400 bg-zinc-800 px-2 py-1 rounded-md">
-                          Feature under development
-                        </p>
                       </div>
                       <p className="text-sm text-zinc-400">
-                        https://example.com/webhook
+                        {notificationConfig.webhookUrl || 'No webhook set'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-10">
+                    <div className="flex items-center gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p
+                              className={`text-sm ${
+                                !!notificationConfig.webhookUrl
+                                  ? 'text-zinc-400 cursor-pointer transition-all duration-200 hover:bg-zinc-700/50'
+                                  : 'text-zinc-500 cursor-not-allowed opacity-50'
+                              } bg-zinc-800/50 px-2 py-1 rounded-md flex items-center gap-2`}
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  notificationConfig.webhookSecret || ''
+                                );
+
+                                const copyIcon = document.getElementById(
+                                  `webhook-secret-copy-icon`
+                                );
+                                const checkIcon = document.getElementById(
+                                  `webhook-secret-check-icon`
+                                );
+
+                                copyIcon?.classList.add('hidden');
+                                checkIcon?.classList.remove('hidden');
+
+                                setTimeout(() => {
+                                  copyIcon?.classList.remove('hidden');
+                                  checkIcon?.classList.add('hidden');
+                                }, 1000);
+                              }}
+                            >
+                              {isSendingTestAlert ? (
+                                <>
+                                  <Globe className="mr-2 h-4 w-4 animate-spin" />
+                                  Copy Secret
+                                </>
+                              ) : (
+                                <>
+                                  Copy Secret
+                                  <CopyIcon
+                                    id={`webhook-secret-copy-icon`}
+                                    className={`h-4 w-4 ${!!notificationConfig.webhookUrl ? 'text-zinc-400' : 'text-zinc-500'}`}
+                                  />
+                                  <CheckIcon
+                                    id={`webhook-secret-check-icon`}
+                                    className="w-4 h-4 hidden"
+                                  />
+                                </>
+                              )}
+                            </p>
+                          </TooltipTrigger>
+                          {!!!notificationConfig.webhookUrl && (
+                            <TooltipContent>
+                              <p>Click to copy webhook Secret</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <label className="relative inline-flex cursor-pointer items-center">
                       <input
                         type="checkbox"
-                        checked={notifications.webhook}
-                        onChange={() => handleNotificationChange('webhook')}
+                        checked={
+                          !!notificationConfig.webhookUrl &&
+                          (notificationConfig.isDownAlertEnabled ||
+                            notificationConfig.isHighPingAlertEnabled)
+                        }
+                        onChange={() => setHandleModalOpen(true)}
                         className="peer sr-only"
                       />
                       <div className="peer h-6 w-11 rounded-full bg-zinc-700 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
                     </label>
                   </div>
                 </div>
-
-                {/* <div className="pt-4">
-                  <Button className="bg-emerald-600 hover:bg-emerald-700">
-                    Save Notification Settings
-                  </Button>
-                </div> */}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={emailModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="bg-zinc-950 text-white border border-zinc-800">
-          <DialogHeader>
-            <DialogTitle>
-              {notificationConfig?.email
-                ? 'Edit Email Address'
-                : 'Enter Email Address'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-2 space-y-4">
-            <Input
-              type="email"
-              placeholder="you@example.com"
-              value={email || ''}
-              onChange={e => {
-                setEmail(e.target.value);
-              }}
-              autoFocus
-              className="bg-zinc-900 text-white border-zinc-700"
-            />
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Checkbox
-                  checked={isDownAlertEnabled}
-                  onCheckedChange={() => setIsDownAlertEnabled(prev => !prev)}
-                  className="accent-emerald-600"
-                />
-                Notify me when my website goes UP or DOWN
-              </Label>
-              <Label className="flex items-center gap-2">
-                <Checkbox
-                  checked={isHighPingAlertEnabled}
-                  onCheckedChange={() =>
-                    setIsHighPingAlertEnabled(prev => !prev)
-                  }
-                  className="accent-emerald-600"
-                />
-                Notify me when my website is responding with high ping
-              </Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={handleSaveEmail}
-              className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={
-                isSaving ||
-                (!!email &&
-                  !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
-                    email
-                  ))
-              }
-            >
-              {isSaving ? (
-                <>
-                  <Globe className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NotificationUpdateDialog
+        id={id}
+        isModalOpen={handleModalOpen}
+        setIsModalOpen={setHandleModalOpen}
+        setNotificationConfig={setNotificationConfig}
+      />
     </div>
   );
 }

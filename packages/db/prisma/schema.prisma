@@ -110,6 +110,8 @@ model NotificationConfig {
   isHighPingAlertEnabled Boolean  @default(false)
   isDownAlertEnabled     Boolean  @default(false)
   createdAt              DateTime @default(now())
+  webhookUrl             String?
+  webhookSecret          String?
 
   @@id([userId, websiteId])
 }
