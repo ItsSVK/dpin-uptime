@@ -283,13 +283,13 @@ export function WebsiteAddOrUpdateDialog({
                 clearForm();
                 setOpen(false);
               }}
-              className="border-zinc-800 bg-zinc-900"
+              className="border-zinc-800 bg-zinc-900 cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
               disabled={isValidating}
             >
               {isValidating ? (

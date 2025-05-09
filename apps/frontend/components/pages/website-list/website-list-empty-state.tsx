@@ -15,7 +15,7 @@ export function WebsiteListEmptyState() {
       </p>
       <div className="mt-6">
         <WebsiteAddOrUpdateDialog>
-          <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+          <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 cursor-pointer">
             <PlusCircle className="h-4 w-4" />
             Add Your First Website
           </Button>

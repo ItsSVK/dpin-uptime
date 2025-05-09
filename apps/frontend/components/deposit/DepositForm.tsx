@@ -102,7 +102,12 @@ export default function DepositForm({
   return (
     <div className="container space-y-8 p-8 pt-6 mx-auto max-w-4xl">
       <div className="flex items-center gap-6">
-        <Button variant="outline" size="icon" asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          asChild
+          className="cursor-pointer"
+        >
           <Link href="/dashboard">
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Back to dashboard</span>

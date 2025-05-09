@@ -132,7 +132,7 @@ export default function DashboardPage({ websites, stats }: DashboardPageProps) {
         <WebsiteAddOrUpdateDialog>
           <Button
             size="lg"
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
           >
             <PlusCircle className="h-5 w-5" />
             Add Website

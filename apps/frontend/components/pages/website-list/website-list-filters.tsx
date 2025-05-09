@@ -135,7 +135,10 @@ export function WebsiteListFilters({
               className="gap-1 border-zinc-700 bg-zinc-900"
             >
               Status: {status}
-              <button onClick={() => toggleStatus(status)}>
+              <button
+                onClick={() => toggleStatus(status)}
+                className="cursor-pointer"
+              >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove filter</span>
               </button>
