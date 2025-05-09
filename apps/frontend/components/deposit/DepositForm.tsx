@@ -276,7 +276,7 @@ export default function DepositForm({
                     </span>
                     <span className="text-xs text-zinc-400">
                       <Link
-                        href={`https://explorer.solana.com/tx/${d.signature}?cluster=${process.env.NEXT_PUBLIC_SOLANA_NETWORK}`}
+                        href={`https://explorer.solana.com/tx/${d.signature}?cluster=${process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'}`}
                         target="_blank"
                         className="text-zinc-400 hover:text-zinc-300"
                       >
