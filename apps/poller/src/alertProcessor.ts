@@ -1,10 +1,20 @@
 import { prismaClient } from 'db/client';
 import { WebsiteAlertStatus, WebsiteAlertType } from '@prisma/client';
-import { transporter } from 'common/node-mail';
 import fetch from 'node-fetch';
+import nodemailer from 'nodemailer';
 
 const alertPollingInterval = 30000; // 30 seconds
 let alertPollingTimer: NodeJS.Timeout | null = null;
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com', // e.g., smtp.gmail.com
+  port: 465, // or 465 for SSL and 587 for TLS
+  secure: true, // true for 465, false for 587
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
 async function updateWebsiteAlertRetryStatus(id: string) {
   await prismaClient.websiteAlert.update({
