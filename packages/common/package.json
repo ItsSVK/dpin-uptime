@@ -5,7 +5,8 @@
   "exports": {
     ".": "./index.ts",
     "./mail": "./mail.ts",
-    "./node-mail": "./node-mail.ts"
+    "./node-mail": "./node-mail.ts",
+    "./mail-util": "./mail-util.ts"
   },
   "dependencies": {
     "tweetnacl": "^1.0.3",

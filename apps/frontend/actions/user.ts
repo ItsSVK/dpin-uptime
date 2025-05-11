@@ -140,3 +140,19 @@ export async function getNotificationConfig(id: string) {
 
   return notificationConfig;
 }
+
+export async function testWebhookAction(webhookUrl: string) {
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Test webhook' }),
+    });
+    if (!res.ok) {
+      return { success: false, status: res.status };
+    }
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

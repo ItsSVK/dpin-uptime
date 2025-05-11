@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const notificationConfigSchema = z.object({
-  email: z.string().email('Invalid email address').optional().nullable(),
+  email: z.string().optional().nullable(),
   webhookUrl: z.string().optional().nullable(),
   webhookSecret: z.string().optional().nullable(),
   isDownAlertEnabled: z.boolean(),

@@ -2,6 +2,7 @@
 
 import {
   getNotificationConfig,
+  testWebhookAction,
   updateNotificationConfig,
 } from '@/actions/user';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,8 @@ export default function NotificationUpdateDialog({
   setNotificationConfig: (notificationConfig: NotificationConfig) => void;
 }) {
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
-  const [isWebhookOk, setIsWebhookOk] = useState(true);
+  const [isWebhookOk, setIsWebhookOk] = useState<boolean | null>(null);
+  const [isWebhookChanged, setIsWebhookChanged] = useState(false);
   const router = useRouter();
   const submitForm = async (data: NotificationConfig) => {
     // validate the form
@@ -77,6 +79,24 @@ export default function NotificationUpdateDialog({
     },
   });
 
+  const handleTestWebhook = async () => {
+    setIsTestingWebhook(true);
+    const webhookUrl = form.getValues('webhookUrl');
+    if (!webhookUrl) {
+      toast.error('Webhook URL is not set');
+      setIsTestingWebhook(false);
+      return;
+    }
+    const result = await testWebhookAction(webhookUrl);
+    if (result.success) {
+      setIsWebhookOk(true);
+      setIsWebhookChanged(false);
+    } else {
+      setIsWebhookOk(false);
+    }
+    setIsTestingWebhook(false);
+  };
+
   useEffect(() => {
     const fetchNotificationConfig = async () => {
       const notificationConfig = await getNotificationConfig(id);
@@ -90,6 +110,8 @@ export default function NotificationUpdateDialog({
   const handleCloseModal = () => {
     form.reset();
     setIsModalOpen(false);
+    setIsWebhookOk(null);
+    setIsWebhookChanged(false);
   };
 
   return (
@@ -112,35 +134,53 @@ export default function NotificationUpdateDialog({
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Webhook URL</Label>
-                <Input
-                  type="text"
-                  placeholder="https://example.com/webhook"
-                  {...form.register('webhookUrl')}
-                  onChange={e => {
-                    form.setValue('webhookUrl', e.target.value);
-                    setIsWebhookOk(false);
-                  }}
-                  className="bg-zinc-900 text-white border-zinc-700 w-full"
-                />
-                <Button
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={async () => {
-                    setIsTestingWebhook(true);
-                    setTimeout(() => {
-                      setIsTestingWebhook(false);
-                      setIsWebhookOk(true);
-                      toast.success('Test webhook sent! (simulated)');
-                    }, 1000);
-                  }}
-                  disabled={
-                    !form.getValues('webhookUrl') ||
-                    (!!form.getValues('webhookUrl') && isTestingWebhook) ||
-                    (!!form.getValues('webhookUrl') && isWebhookOk)
-                  }
-                >
-                  {isTestingWebhook ? 'Sending...' : 'Test Webhook'}
-                </Button>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="https://example.com/webhook"
+                    {...form.register('webhookUrl')}
+                    onChange={e => {
+                      form.setValue('webhookUrl', e.target.value);
+                      if (e.target.value !== '') {
+                        setIsWebhookChanged(true);
+                      } else {
+                        setIsWebhookChanged(false);
+                      }
+                      setIsWebhookOk(null);
+                    }}
+                    className="bg-zinc-900 text-white border-zinc-700 w-2/3"
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-1/3"
+                    onClick={handleTestWebhook}
+                    disabled={
+                      !form.getValues('webhookUrl') ||
+                      (!!form.getValues('webhookUrl') && isTestingWebhook) ||
+                      //   (!!form.getValues('webhookUrl') && isWebhookOk)
+                      !isWebhookChanged
+                    }
+                  >
+                    {isTestingWebhook ? (
+                      <>
+                        <Globe className="mr-2 h-4 w-4 animate-spin" /> Please
+                        wait...
+                      </>
+                    ) : (
+                      'Test Webhook'
+                    )}
+                  </Button>
+                </div>
+                {isWebhookOk === true && (
+                  <p className="text-sm text-green-500 animate-in fade-in-0 duration-300">
+                    Webhook is reachable!
+                  </p>
+                )}
+                {isWebhookOk === false && (
+                  <p className="text-sm text-red-500 animate-in fade-in-0 duration-300">
+                    Webhook is not reachable!
+                  </p>
+                )}
               </div>
               <div className="space-y-4 pt-2">
                 <Label className="flex items-center gap-2 cursor-pointer">
@@ -178,7 +218,8 @@ export default function NotificationUpdateDialog({
               disabled={
                 !form.formState.isValid ||
                 form.formState.isSubmitting ||
-                (!!form.watch('webhookUrl') && !isWebhookOk)
+                // (!!form.watch('webhookUrl') && !isWebhookOk)
+                isWebhookChanged
               }
             >
               {form.formState.isSubmitting ? (

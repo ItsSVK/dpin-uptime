@@ -2,7 +2,7 @@ import { prismaClient } from 'db/client';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { ValidatorManager } from '@/utils/validatorSelection';
 import { addSeconds } from '@/utils/dateUtils';
-import { Region, WebsiteStatus, Prisma } from '@prisma/client'; // Added Prisma for TransactionClient type hint
+import { Region, WebsiteStatus, WebsiteAlertType } from '@prisma/client'; // Added Prisma for TransactionClient type hint
 import { validateWebsite } from '@/src/validator/validationService';
 import { randomUUIDv7 } from 'bun';
 import { MessageType, REPLY_MESSAGE, verifySignature } from 'common';
@@ -22,6 +22,7 @@ import {
 } from '@/src/constants';
 import { getValidatorTier, getTierBonus } from '@/src/validator/tierUtils';
 import { updateHistoricalData } from '@/src/website/uptimeService';
+import { createAlert } from 'common/mail-util';
 
 // Define types for website and user objects used in the loop, if not already available globally
 // These are based on the includes in the prisma queries
@@ -44,6 +45,8 @@ interface MonitoredWebsite {
     email: string | null;
     isDownAlertEnabled: boolean;
     isHighPingAlertEnabled: boolean;
+    webhookUrl: string | null;
+    webhookSecret: string | null;
     // other notificationConfig fields if accessed
   } | null;
   user: MonitoredWebsiteUser;
@@ -233,21 +236,54 @@ export function startMonitoring(validatorManagerInstance: ValidatorManager) {
 
         if (website.notificationConfig && website.user.emailAlertQuota > 0) {
           if (website.notificationConfig.isDownAlertEnabled) {
+            const regionKey = region.toString();
+
             let newStatus: 'DOWN' | 'UP' | null = null;
             if (majorityStatus === WebsiteStatus.OFFLINE) newStatus = 'DOWN';
             if (majorityStatus === WebsiteStatus.ONLINE) newStatus = 'UP';
             if (newStatus) {
               const prevStatus = lastWebsiteStatus[website.id];
               if (prevStatus !== newStatus) {
-                await sendWebsiteStatusEmail({
-                  to: website.notificationConfig.email!,
-                  websiteUrl: website.url,
-                  status: newStatus,
-                  timestamp: new Date().toLocaleString(),
-                });
-                await updateUserData(website.userId, {
-                  emailAlertQuota: website.user.emailAlertQuota - 1,
-                });
+                if (
+                  website.notificationConfig.email &&
+                  website.notificationConfig.email !== ''
+                ) {
+                  await sendWebsiteStatusEmail({
+                    to: website.notificationConfig.email,
+                    websiteUrl: website.url,
+                    status: newStatus,
+                    timestamp: new Date().toLocaleString(),
+                    userId: website.userId,
+                    websiteId: website.id,
+                  });
+                  await updateUserData(website.userId, {
+                    emailAlertQuota: website.user.emailAlertQuota - 1,
+                  });
+                }
+
+                if (
+                  website.notificationConfig.webhookUrl &&
+                  website.notificationConfig.webhookUrl !== ''
+                ) {
+                  await createAlert(
+                    website.notificationConfig.webhookUrl,
+                    JSON.stringify({
+                      event:
+                        newStatus === 'DOWN' ? 'website_down' : 'website_up',
+                      websiteId: website.id,
+                      timestamp: new Date(),
+                      details: {
+                        websiteUrl: website.url,
+                        status: newStatus,
+                        region: regionKey,
+                      },
+                    }),
+                    website.userId,
+                    website.id,
+                    WebsiteAlertType.WEBHOOK
+                  );
+                }
+
                 lastWebsiteStatus[website.id] = newStatus;
               }
             }
@@ -285,17 +321,48 @@ export function startMonitoring(validatorManagerInstance: ValidatorManager) {
                   history.slice(0, -1).reduce((a, b) => a + b, 0) /
                   (history.length - 1);
                 if (avg > 0 && medianPing > avg * PING_ANOMALY_THRESHOLD) {
-                  await sendWebsitePingAnomalyEmail({
-                    to: website.notificationConfig.email!,
-                    websiteUrl: website.url,
-                    region: regionKey,
-                    currentPing: medianPing,
-                    averagePing: Math.round(avg),
-                    timestamp: new Date().toLocaleString(),
-                  });
-                  await updateUserData(website.userId, {
-                    emailAlertQuota: website.user.emailAlertQuota - 1,
-                  });
+                  if (
+                    website.notificationConfig.email &&
+                    website.notificationConfig.email !== ''
+                  ) {
+                    await sendWebsitePingAnomalyEmail({
+                      to: website.notificationConfig.email!,
+                      websiteUrl: website.url,
+                      region: regionKey,
+                      currentPing: medianPing,
+                      averagePing: Math.round(avg),
+                      timestamp: new Date().toLocaleString(),
+                      userId: website.userId,
+                      websiteId: website.id,
+                    });
+                    await updateUserData(website.userId, {
+                      emailAlertQuota: website.user.emailAlertQuota - 1,
+                    });
+                  }
+
+                  if (
+                    website.notificationConfig.webhookUrl &&
+                    website.notificationConfig.webhookUrl !== ''
+                  ) {
+                    await createAlert(
+                      website.notificationConfig.webhookUrl,
+                      JSON.stringify({
+                        event: 'high_ping',
+                        websiteId: website.id,
+                        timestamp: new Date(),
+                        details: {
+                          websiteUrl: website.url,
+                          region: regionKey,
+                          currentPing: medianPing,
+                          averagePing: Math.round(avg),
+                        },
+                      }),
+                      website.userId,
+                      website.id,
+                      WebsiteAlertType.WEBHOOK
+                    );
+                  }
+
                   recentPings[websiteKey][regionKey] = []; // Clear history to avoid spam
                 }
               }

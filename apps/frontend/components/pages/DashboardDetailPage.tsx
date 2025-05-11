@@ -31,7 +31,8 @@ import { useState, useEffect } from 'react';
 import {
   getWebsite,
   hasActiveValidators,
-  sendTestAlert,
+  sendEmailTestAlert,
+  sendWebhookTestAlert,
 } from '@/actions/website';
 import { processWebsiteData } from '@/lib/websiteUtils';
 import { ProcessedWebsite } from '@/types/website';
@@ -45,6 +46,7 @@ import {
 } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import NotificationUpdateDialog from '@/components/pages/notification-update-dialog';
+import { WebhookDocsModal } from '@/components/pages/WebhookDocsModal';
 
 export default function DashboardDetailPage({ id }: { id: string }) {
   const router = useRouter();
@@ -66,8 +68,10 @@ export default function DashboardDetailPage({ id }: { id: string }) {
     webhook: !!notificationConfig.webhookUrl,
   });
   const [handleModalOpen, setHandleModalOpen] = useState(false);
-  const [isSendingTestAlert, setIsSendingTestAlert] = useState(false);
-
+  const [isSendingTestEmailAlert, setIsSendingTestEmailAlert] = useState(false);
+  const [isSendingTestWebhookAlert, setIsSendingTestWebhookAlert] =
+    useState(false);
+  const [isWebhookDocsOpen, setIsWebhookDocsOpen] = useState(false);
   useEffect(() => {
     const fetchWebsite = async () => {
       const response = await getWebsite(id);
@@ -89,24 +93,39 @@ export default function DashboardDetailPage({ id }: { id: string }) {
     };
   }, [id, router]);
 
-  const handleSendTestAlert = async () => {
-    if (isSendingTestAlert) {
+  const handleSendTestAlert = async (type: 'email' | 'webhook') => {
+    if (isSendingTestEmailAlert || isSendingTestWebhookAlert) {
       return;
     }
     if (
+      type === 'email' &&
       !!notificationConfig.email &&
       (notificationConfig.isDownAlertEnabled ||
         notificationConfig.isHighPingAlertEnabled)
     ) {
-      setIsSendingTestAlert(true);
-      const response = await sendTestAlert(id);
+      setIsSendingTestEmailAlert(true);
+      const response = await sendEmailTestAlert(id);
       if (response.success) {
         toast.success(`We have sent Test Alert to ${notificationConfig.email}`);
       } else {
         toast.error(response.message || 'Failed to send Test Alert');
       }
       router.refresh();
-      setIsSendingTestAlert(false);
+      setIsSendingTestEmailAlert(false);
+    }
+
+    if (type === 'webhook' && !!notificationConfig.webhookUrl) {
+      setIsSendingTestWebhookAlert(true);
+      const response = await sendWebhookTestAlert(id);
+      if (response.success) {
+        toast.success(
+          `We have sent Test Alert to ${notificationConfig.webhookUrl}`
+        );
+      } else {
+        toast.error(response.message || 'Failed to send Test Alert');
+      }
+      router.refresh();
+      setIsSendingTestWebhookAlert(false);
     }
   };
 
@@ -122,14 +141,24 @@ export default function DashboardDetailPage({ id }: { id: string }) {
     <div className="container space-y-6 p-8 pt-6 mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            asChild
+            className="cursor-pointer"
+          >
             <Link href="/dashboard">
               <ArrowLeft className="h-4 w-4" />
               <span className="sr-only">Back to dashboard</span>
             </Link>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">{website.name}</h1>
-          <Button variant="ghost" size="icon" asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="cursor-pointer"
+          >
             <a href={website.url} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
               <span className="sr-only">Visit website</span>
@@ -283,9 +312,9 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                                   ? 'text-zinc-400 cursor-pointer transition-all duration-200 hover:bg-zinc-700/50'
                                   : 'text-zinc-500 cursor-not-allowed opacity-50'
                               } bg-zinc-800/50 px-2 py-1 rounded-md flex items-center gap-2`}
-                              onClick={() => handleSendTestAlert()}
+                              onClick={() => handleSendTestAlert('email')}
                             >
-                              {isSendingTestAlert ? (
+                              {isSendingTestEmailAlert ? (
                                 <>
                                   <Globe className="mr-2 h-4 w-4 animate-spin" />
                                   Sending...
@@ -437,29 +466,77 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                                 }, 1000);
                               }}
                             >
-                              {isSendingTestAlert ? (
+                              <>
+                                Copy Secret
+                                <CopyIcon
+                                  id={`webhook-secret-copy-icon`}
+                                  className={`h-4 w-4 ${!!notificationConfig.webhookUrl ? 'text-zinc-400' : 'text-zinc-500'}`}
+                                />
+                                <CheckIcon
+                                  id={`webhook-secret-check-icon`}
+                                  className="w-4 h-4 hidden"
+                                />
+                              </>
+                            </p>
+                          </TooltipTrigger>
+                          {!!!notificationConfig.webhookUrl && (
+                            <TooltipContent>
+                              <p>Enable webhook to copy secret</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                      <p
+                        className={`text-sm text-zinc-400 cursor-pointer transition-all duration-200 hover:bg-zinc-700/50 bg-zinc-800/50 px-2 py-1 rounded-md flex items-center gap-2`}
+                        onClick={() => {
+                          setIsWebhookDocsOpen(true);
+                        }}
+                      >
+                        DOCS
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p
+                              className={`text-sm ${
+                                !!notificationConfig.webhookUrl &&
+                                (notificationConfig.isDownAlertEnabled ||
+                                  notificationConfig.isHighPingAlertEnabled)
+                                  ? 'text-zinc-400 cursor-pointer transition-all duration-200 hover:bg-zinc-700/50'
+                                  : 'text-zinc-500 cursor-not-allowed opacity-50'
+                              } bg-zinc-800/50 px-2 py-1 rounded-md flex items-center gap-2`}
+                              onClick={() => handleSendTestAlert('webhook')}
+                            >
+                              {isSendingTestWebhookAlert ? (
                                 <>
                                   <Globe className="mr-2 h-4 w-4 animate-spin" />
-                                  Copy Secret
+                                  Sending...
                                 </>
                               ) : (
                                 <>
-                                  Copy Secret
-                                  <CopyIcon
-                                    id={`webhook-secret-copy-icon`}
-                                    className={`h-4 w-4 ${!!notificationConfig.webhookUrl ? 'text-zinc-400' : 'text-zinc-500'}`}
-                                  />
-                                  <CheckIcon
-                                    id={`webhook-secret-check-icon`}
-                                    className="w-4 h-4 hidden"
+                                  Send Test Alert
+                                  <SendHorizonal
+                                    className={`h-4 w-4 ${
+                                      !!notificationConfig.webhookUrl &&
+                                      (notificationConfig.isDownAlertEnabled ||
+                                        notificationConfig.isHighPingAlertEnabled)
+                                        ? 'text-zinc-400'
+                                        : 'text-zinc-500'
+                                    }`}
                                   />
                                 </>
                               )}
                             </p>
                           </TooltipTrigger>
-                          {!!!notificationConfig.webhookUrl && (
+                          {!(
+                            !!notificationConfig.webhookUrl &&
+                            (notificationConfig.isDownAlertEnabled ||
+                              notificationConfig.isHighPingAlertEnabled)
+                          ) && (
                             <TooltipContent>
-                              <p>Click to copy webhook Secret</p>
+                              <p>Enable webhook to send a test alert</p>
                             </TooltipContent>
                           )}
                         </Tooltip>
@@ -490,6 +567,10 @@ export default function DashboardDetailPage({ id }: { id: string }) {
         isModalOpen={handleModalOpen}
         setIsModalOpen={setHandleModalOpen}
         setNotificationConfig={setNotificationConfig}
+      />
+      <WebhookDocsModal
+        open={isWebhookDocsOpen}
+        onOpenChange={setIsWebhookDocsOpen}
       />
     </div>
   );

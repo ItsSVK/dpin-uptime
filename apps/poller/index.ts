@@ -9,11 +9,13 @@ import {
   stopTransactionPolling,
 } from '@/src/transactionProcessor';
 import { processingTransactions } from '@/src/state';
+import { startAlertPolling, stopAlertPolling } from '@/src/alertProcessor';
 
 console.log('Initializing Poller...');
 
 startHealthMonitoring();
 startTransactionPolling();
+startAlertPolling();
 
 console.log('Poller initialized and services started.');
 
@@ -22,6 +24,7 @@ process.on('SIGTERM', async () => {
   console.log('Received SIGTERM signal. Cleaning up...');
   stopTransactionPolling();
   stopHealthMonitoring();
+  stopAlertPolling();
 
   // Clean up any processing transactions
   for (const txnId of processingTransactions) {

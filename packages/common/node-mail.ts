@@ -1,7 +1,8 @@
 import nodemailer from 'nodemailer';
-
+import { createAlert } from './mail-util';
+import { WebsiteAlertType } from '@prisma/client';
 // Create a transporter using SMTP
-const transporter = nodemailer.createTransport({
+export const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com', // e.g., smtp.gmail.com
   port: 587, // or 465 for SSL
   secure: false, // true for 465, false for 587
@@ -40,25 +41,44 @@ export async function sendWebsiteStatusEmail({
   websiteUrl,
   status,
   timestamp,
+  userId,
+  websiteId,
 }: {
-  to: string | string[];
+  to: string;
   websiteUrl: string;
   status: 'DOWN' | 'UP';
   timestamp: string;
+  userId: string;
+  websiteId: string;
 }) {
-  const info = await transporter.sendMail({
-    from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
-    to: Array.isArray(to) ? to : [to],
-    subject: `Notification: ${websiteUrl} is ${status === 'DOWN' ? 'DOWN' : 'ONLINE'}`,
-    html: websiteStatusTemplate({ websiteUrl, status, timestamp }),
-  });
+  await createAlert(
+    to,
+    JSON.stringify({
+      from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+      to,
+      subject: `Notification: ${websiteUrl} is ${status === 'DOWN' ? 'DOWN' : 'ONLINE'}`,
+      html: websiteStatusTemplate({ websiteUrl, status, timestamp }),
+    }),
+    userId,
+    websiteId,
+    WebsiteAlertType.EMAIL
+  );
 
-  if (info.rejected.length > 0) {
-    console.error('Failed to send website status email:', info.rejected);
-    return null;
-  }
+  return;
 
-  return info;
+  // const info = await transporter.sendMail({
+  //   from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+  //   to,
+  //   subject: `Notification: ${websiteUrl} is ${status === 'DOWN' ? 'DOWN' : 'ONLINE'}`,
+  //   html: websiteStatusTemplate({ websiteUrl, status, timestamp }),
+  // });
+
+  // if (info.rejected.length > 0) {
+  //   console.error('Failed to send website status email:', info.rejected);
+  //   return null;
+  // }
+
+  // return info;
 }
 
 function websitePingAnomalyTemplate({
@@ -99,31 +119,56 @@ export async function sendWebsitePingAnomalyEmail({
   currentPing,
   averagePing,
   timestamp,
+  userId,
+  websiteId,
 }: {
-  to: string | string[];
+  to: string;
   websiteUrl: string;
   region: string;
   currentPing: number;
   averagePing: number;
   timestamp: string;
+  userId: string;
+  websiteId: string;
 }) {
-  const info = await transporter.sendMail({
-    from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
-    to: Array.isArray(to) ? to : [to],
-    subject: `Alert: High Ping for ${websiteUrl} in ${region}`,
-    html: websitePingAnomalyTemplate({
-      websiteUrl,
-      region,
-      currentPing,
-      averagePing,
-      timestamp,
+  await createAlert(
+    to,
+    JSON.stringify({
+      from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+      to,
+      subject: `Alert: High Ping for ${websiteUrl} in ${region}`,
+      html: websitePingAnomalyTemplate({
+        websiteUrl,
+        region,
+        currentPing,
+        averagePing,
+        timestamp,
+      }),
     }),
-  });
+    userId,
+    websiteId,
+    WebsiteAlertType.EMAIL
+  );
 
-  if (info.rejected.length > 0) {
-    console.error('Failed to send website ping anomaly email:', info.rejected);
-    return null;
-  }
+  return;
 
-  return info;
+  // const info = await transporter.sendMail({
+  //   from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+  //   to,
+  //   subject: `Alert: High Ping for ${websiteUrl} in ${region}`,
+  //   html: websitePingAnomalyTemplate({
+  //     websiteUrl,
+  //     region,
+  //     currentPing,
+  //     averagePing,
+  //     timestamp,
+  //   }),
+  // });
+
+  // if (info.rejected.length > 0) {
+  //   console.error('Failed to send website ping anomaly email:', info.rejected);
+  //   return null;
+  // }
+
+  // return info;
 }

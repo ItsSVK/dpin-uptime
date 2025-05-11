@@ -4,13 +4,19 @@ import { Website, WebsiteTick } from '@/types/website';
 import { prismaClient } from 'db/client';
 import { formatUrl } from '@/lib/url';
 import { getUserFromJWT } from '@/lib/auth';
-import { NotificationConfig, User, WebsiteStatus } from '@prisma/client';
+import {
+  NotificationConfig,
+  User,
+  WebsiteAlertType,
+  WebsiteStatus,
+} from '@prisma/client';
 import { getUserBalance } from '@/actions/deposit';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import {
   sendWebsitePingAnomalyEmail,
   sendWebsiteStatusEmail,
 } from 'common/node-mail';
+import { createAlert } from 'common/mail-util';
 
 interface Response<T> {
   success: boolean;
@@ -82,6 +88,8 @@ export async function getWebsite(id: string): Promise<
         isHighPingAlertEnabled: false,
         isDownAlertEnabled: false,
         createdAt: new Date(),
+        webhookUrl: null,
+        webhookSecret: null,
       },
     },
   };
@@ -285,7 +293,7 @@ export async function hasActiveValidators(): Promise<Response<boolean>> {
   }
 }
 
-export async function sendTestAlert(
+export async function sendEmailTestAlert(
   websiteId: string
 ): Promise<Response<void>> {
   const user = await getUserFromJWT();
@@ -337,6 +345,8 @@ export async function sendTestAlert(
       websiteUrl: notificationConfig.website.url,
       status: 'DOWN',
       timestamp: new Date().toLocaleString(),
+      userId: user.userId,
+      websiteId,
     });
     alertCount++;
     existingQuota--;
@@ -350,6 +360,8 @@ export async function sendTestAlert(
       currentPing: 100,
       averagePing: 50,
       timestamp: new Date().toLocaleString(),
+      userId: user.userId,
+      websiteId,
     });
     alertCount++;
   }
@@ -367,6 +379,85 @@ export async function sendTestAlert(
       // },
     },
   });
+
+  return {
+    success: true,
+  };
+}
+
+export async function sendWebhookTestAlert(
+  websiteId: string
+): Promise<Response<void>> {
+  const user = await getUserFromJWT();
+  if (!user) {
+    return {
+      success: false,
+      message: 'Unauthorized',
+    };
+  }
+
+  const notificationConfig = await prismaClient.notificationConfig.findFirst({
+    where: {
+      userId: user.userId,
+      websiteId: websiteId,
+    },
+    include: {
+      website: true,
+    },
+  });
+
+  if (!notificationConfig) {
+    return {
+      success: false,
+      message: 'Website not found',
+    };
+  }
+
+  if (!notificationConfig.webhookUrl) {
+    return {
+      success: false,
+      message: 'Webhook URL is not set',
+    };
+  }
+
+  if (notificationConfig.isDownAlertEnabled) {
+    await createAlert(
+      notificationConfig.webhookUrl,
+      JSON.stringify({
+        event: 'website_down',
+        websiteId: notificationConfig.website.id,
+        timestamp: new Date(),
+        details: {
+          websiteUrl: notificationConfig.website.url,
+          status: 'DOWN',
+          region: notificationConfig.website.preferredRegion || 'US',
+        },
+      }),
+      user.userId,
+      websiteId,
+      WebsiteAlertType.WEBHOOK
+    );
+  }
+
+  if (notificationConfig.isHighPingAlertEnabled) {
+    await createAlert(
+      notificationConfig.webhookUrl,
+      JSON.stringify({
+        event: 'high_ping',
+        websiteId: notificationConfig.website.id,
+        timestamp: new Date(),
+        details: {
+          websiteUrl: notificationConfig.website.url,
+          region: notificationConfig.website.preferredRegion || 'US',
+          currentPing: 100,
+          averagePing: 50,
+        },
+      }),
+      user.userId,
+      websiteId,
+      WebsiteAlertType.WEBHOOK
+    );
+  }
 
   return {
     success: true,

@@ -24,6 +24,7 @@ model User {
   websites           Website[]
   transactions       Transaction[]
   notificationConfig NotificationConfig[]
+  alerts             WebsiteAlert[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 }
@@ -47,6 +48,7 @@ model Website {
   uptimeHistory      UptimeHistory[]
   preferredRegion    String?
   notificationConfig NotificationConfig?
+  alerts             WebsiteAlert[]
 }
 
 model Validator {
@@ -130,6 +132,32 @@ model UptimeHistory {
   createdAt        DateTime     @default(now())
 
   @@unique([websiteId, period, startDate])
+}
+
+model WebsiteAlert {
+  id         String             @id @default(uuid())
+  websiteId  String
+  userId     String
+  user       User               @relation(fields: [userId], references: [id])
+  website    Website            @relation(fields: [websiteId], references: [id])
+  to         String
+  content    String
+  createdAt  DateTime           @default(now())
+  alertType  WebsiteAlertType
+  status     WebsiteAlertStatus @default(PENDING)
+  retryCount Int                @default(0)
+  sentAt     DateTime?
+}
+
+enum WebsiteAlertType {
+  EMAIL
+  WEBHOOK
+}
+
+enum WebsiteAlertStatus {
+  PENDING
+  SENT
+  FAILED
 }
 
 enum WebsiteStatus {
