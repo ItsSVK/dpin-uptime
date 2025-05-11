@@ -105,7 +105,7 @@ export default function NotificationUpdateDialog({
       }
     };
     fetchNotificationConfig();
-  }, [isModalOpen]);
+  }, [isModalOpen, form, id]);
 
   const handleCloseModal = () => {
     form.reset();

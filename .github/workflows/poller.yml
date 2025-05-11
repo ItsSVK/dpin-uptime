@@ -79,6 +79,8 @@ jobs:
               --network dpin-network \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               -e SOLANA_KEYPAIR=${{ secrets.SOLANA_KEYPAIR }} \
+              -e EMAIL_USER=${{ secrets.EMAIL_USER }} \
+              -e EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} \
               --init \
               ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
             

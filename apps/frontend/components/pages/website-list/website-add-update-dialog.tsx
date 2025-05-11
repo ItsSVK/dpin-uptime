@@ -1,7 +1,5 @@
 'use client';
 
-import type React from 'react';
-
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -73,7 +71,7 @@ export function WebsiteAddOrUpdateDialog({
 
   // Auto-generate name from URL if name is empty
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
+    const subscription = form.watch((value, { name }) => {
       if (name === 'url' && !form.getValues('name')) {
         try {
           const urlObj = new URL(value.url || '');

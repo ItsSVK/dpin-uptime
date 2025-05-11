@@ -79,8 +79,6 @@ jobs:
               --network dpin-network \
               -p 8081:8081 \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-              -e EMAIL_USER=${{ secrets.EMAIL_USER }} \
-              -e EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} \
               --init \
               ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
             

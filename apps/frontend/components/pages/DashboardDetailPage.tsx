@@ -5,11 +5,8 @@ import {
   Globe,
   Link2,
   Mail,
-  Phone,
   SendHorizonal,
-  Slack,
   Info,
-  Copy,
   CheckIcon,
   CopyIcon,
 } from 'lucide-react';
@@ -61,12 +58,12 @@ export default function DashboardDetailPage({ id }: { id: string }) {
       isHighPingAlertEnabled: false,
       isDownAlertEnabled: false,
     });
-  const [notifications, setNotifications] = useState({
-    email: notificationConfig.email !== null,
-    sms: false,
-    slack: false,
-    webhook: !!notificationConfig.webhookUrl,
-  });
+  // const [notifications, setNotifications] = useState({
+  //   email: notificationConfig.email !== null,
+  //   sms: false,
+  //   slack: false,
+  //   webhook: !!notificationConfig.webhookUrl,
+  // });
   const [handleModalOpen, setHandleModalOpen] = useState(false);
   const [isSendingTestEmailAlert, setIsSendingTestEmailAlert] = useState(false);
   const [isSendingTestWebhookAlert, setIsSendingTestWebhookAlert] =
@@ -364,7 +361,7 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                     </label>
                   </div>
                 </div>
-
+                {/* 
                 <div className="flex items-center justify-between rounded-md border border-zinc-800 p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900">
@@ -418,7 +415,7 @@ export default function DashboardDetailPage({ id }: { id: string }) {
                       <div className="peer h-6 w-11 rounded-full bg-zinc-700 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
                     </label>
                   </div>
-                </div>
+                </div> */}
 
                 <div className="flex items-center justify-between rounded-md border border-zinc-800 p-4">
                   <div className="flex items-center gap-3">
