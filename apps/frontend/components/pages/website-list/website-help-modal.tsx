@@ -17,7 +17,7 @@ export function WebsiteHelpModal({
 }: WebsiteHelpModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[900px] w-[90vw] bg-zinc-950 border border-zinc-800">
+      <DialogContent className="max-w-[900px] w-[90vw] bg-zinc-950 border border-zinc-800 md:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
             How to Use DPIN Uptime

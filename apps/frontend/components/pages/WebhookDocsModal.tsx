@@ -15,7 +15,7 @@ export function WebhookDocsModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-950 text-white border border-zinc-800 max-w-2xl w-full">
+      <DialogContent className="bg-zinc-950 text-white border border-zinc-800 max-w-2xl md:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="text-emerald-400">
             Webhook Integration Guide
