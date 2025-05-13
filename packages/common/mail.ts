@@ -39,7 +39,7 @@ export async function sendWebsiteStatusEmail({
   timestamp: string;
 }) {
   const { data, error } = await resend.emails.send({
-    from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+    from: 'DPIN Uptime Alert <alert@itssvk.dev>',
     to: Array.isArray(to) ? to : [to],
     subject: `Notification: ${websiteUrl} is ${status === 'DOWN' ? 'DOWN' : 'ONLINE'}`,
     html: websiteStatusTemplate({ websiteUrl, status, timestamp }),
@@ -100,7 +100,7 @@ export async function sendWebsitePingAnomalyEmail({
   timestamp: string;
 }) {
   const { data, error } = await resend.emails.send({
-    from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+    from: 'DPIN Uptime Alert <alert@itssvk.dev>',
     to: Array.isArray(to) ? to : [to],
     subject: `Alert: High Ping for ${websiteUrl} in ${region}`,
     html: websitePingAnomalyTemplate({

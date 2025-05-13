@@ -1,98 +1,206 @@
-# Turborepo starter
+# dpin-uptime Monorepo
 
-This Turborepo starter is maintained by the Turborepo core team.
+A modular, full-stack uptime monitoring platform built with Bun, TypeScript, TurboRepo, and Docker.  
+This monorepo contains backend services, a Next.js frontend, and shared packages for a scalable, maintainable architecture.
 
-## Using this example
+---
 
-Run the following command:
+## Table of Contents
 
-```sh
-npx create-turbo@latest
-```
+- [Project Structure](#project-structure)
+- [Requirements](#requirements)
+- [Getting Started](#getting-started)
+  - [Local Development (Bun)](#local-development-bun)
+  - [Running with Docker](#running-with-docker)
+- [Scripts](#scripts)
+- [Environment Variables](#environment-variables)
+- [Database](#database)
+- [Production](#production)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+## Project Structure
 
 ```
-cd my-turborepo
-pnpm build
+.
+├── apps/
+│   ├── frontend/   # Next.js frontend
+│   ├── hub/        # Main backend service (WebSocket server, API)
+│   ├── poller/     # Polls websites, processes transactions
+│   └── validator/  # Validates data, connects to hub via WebSocket
+├── packages/
+│   ├── common/             # Shared utilities
+│   ├── db/                 # Database client, Prisma schema, migrations
+│   ├── typescript-config/  # Shared tsconfig
+│   ├── ui/                 # Shared UI components
+│   └── eslint-config/      # Shared lint config
+├── docker/
+│   ├── local/       # Dockerfiles for local dev
+│   └── production/  # Dockerfiles for production
+├── docker-compose.yml
+├── package.json
+└── ...
 ```
 
-### Develop
+---
 
-To develop all apps and packages, run the following command:
+## Requirements
+
+- [Bun](https://bun.sh/) (v1.2.7+)
+- [Node.js](https://nodejs.org/) (v18+)
+- [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
+- [TurboRepo](https://turbo.build/) (installed via devDependencies)
+- [PostgreSQL](https://www.postgresql.org/) (runs in Docker by default)
+
+---
+
+## Getting Started
+
+### Local Development (Bun)
+
+1. **Install dependencies:**
+
+   ```sh
+   bun install
+   ```
+
+2. **Set up environment variables:**
+
+   - Copy `.env.example` to `.env.local` in each app (see [Environment Variables](#environment-variables)).
+   - Adjust values as needed.
+
+3. **Start the database (Postgres) and pgAdmin:**
+
+   ```sh
+   docker-compose up -d postgres pgadmin
+   ```
+
+4. **Run database migrations:**
+
+   ```sh
+   bun run db:generate
+   bun run db:push
+   ```
+
+5. **Start all apps in dev mode:**
+
+   ```sh
+   bun run dev
+   ```
+
+   Or run a specific app:
+
+   ```sh
+   bun run hub
+   bun run validator
+   bun run poller
+   bun run frontend
+   ```
+
+6. **Access the frontend:**  
+   Open [http://localhost:3000](http://localhost:3000)
+
+---
+
+### Running with Docker
+
+1. **Build and start all services:**
+
+   ```sh
+   docker-compose up --build
+   ```
+
+2. **Services:**
+
+   - **Frontend:** [http://localhost:3000](http://localhost:3000)
+   - **Hub:** [http://localhost:8081](http://localhost:8081)
+   - **Validator, Poller:** Internal services
+   - **Postgres:** [localhost:5432](http://localhost:5432)
+   - **pgAdmin:** [http://localhost:5050](http://localhost:5050) (login: admin@admin.com / admin)
+
+3. **Stopping services:**
+   ```sh
+   docker-compose down
+   ```
+
+---
+
+## Scripts
+
+From the root `package.json`:
+
+| Script                  | Description                              |
+| ----------------------- | ---------------------------------------- |
+| `bun run dev`           | Start all apps in dev mode (TurboRepo)   |
+| `bun run build`         | Build all apps                           |
+| `bun run lint`          | Lint all apps and packages               |
+| `bun run format`        | Format code with Prettier                |
+| `bun run check-types`   | Type-check all apps/packages             |
+| `bun run hub`           | Start only the hub app in dev mode       |
+| `bun run validator`     | Start only the validator app in dev mode |
+| `bun run poller`        | Start only the poller app in dev mode    |
+| `bun run frontend`      | Start only the frontend in dev mode      |
+| `bun run frontend:prod` | Build and start frontend in prod         |
+| `bun run db:generate`   | Generate Prisma client (db package)      |
+| `bun run db:migrate`    | Run DB migrations (db package)           |
+| `bun run db:push`       | Push schema to DB (db package)           |
+| `bun run db:deploy`     | Deploy DB migrations (db package)        |
+| `bun run db:studio`     | Open Prisma Studio (db package)          |
+
+---
+
+## Environment Variables
+
+Each app expects a `.env.local` file in its directory.  
+**Common variables:**
+
+- `DATABASE_URL` – PostgreSQL connection string (see `docker-compose.yml`)
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` – for direct DB config
+- `NODE_ENV` – `development` or `production`
+- `HUB_URL` – (validator) WebSocket URL for hub
+
+**Example (`apps/hub/.env.local`):**
 
 ```
-cd my-turborepo
-pnpm dev
+DATABASE_URL=postgresql://user:password@localhost:5432/dpin?schema=public
+NODE_ENV=development
 ```
 
-### Remote Caching
+**See each app's `.env.example` or `docker-compose.yml` for details.**
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+---
 
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+## Database
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+- **Postgres** runs in Docker by default.
+- **Prisma** is used for schema and migrations (`packages/db`).
+- Use `bun run db:push` or `bun run db:migrate` to sync schema.
 
-```
-cd my-turborepo
-npx turbo login
-```
+---
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## Production
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+- Use Dockerfiles in `docker/production/` for optimized images.
+- Adjust environment variables and secrets for production.
+- Consider using a managed Postgres instance.
 
-```
-npx turbo link
-```
+---
 
-## Docker
+## Troubleshooting
 
-To build the validator container:
+- **Ports in use:** Stop other services using 3000, 8081, 5432, or 5050.
+- **Database connection errors:** Check `DATABASE_URL` and Postgres container health.
+- **Node modules issues in Docker:** Remove `node_modules` volumes and rebuild:
+  ```sh
+  docker-compose down -v
+  docker-compose up --build
+  ```
+- **Frontend not updating:** If using Docker, ensure volumes are mounted and Next.js cache is cleared.
 
-```bash
-docker build -t dpin-validator -f docker/validator.Dockerfile .
-```
+---
 
-To run the validator container:
+## License
 
-```bash
-docker run -d --name dpin-validator dpin-validator
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
+MIT

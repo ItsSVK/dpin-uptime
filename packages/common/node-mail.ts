@@ -54,7 +54,7 @@ export async function sendWebsiteStatusEmail({
   await createAlert(
     to,
     JSON.stringify({
-      from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+      from: 'DPIN Uptime Alert <alert@itssvk.dev>',
       to,
       subject: `Notification: ${websiteUrl} is ${status === 'DOWN' ? 'DOWN' : 'ONLINE'}`,
       html: websiteStatusTemplate({ websiteUrl, status, timestamp }),
@@ -67,7 +67,7 @@ export async function sendWebsiteStatusEmail({
   return;
 
   // const info = await transporter.sendMail({
-  //   from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+  //   from: 'DPIN Uptime Alert <alert@itssvk.dev>',
   //   to,
   //   subject: `Notification: ${websiteUrl} is ${status === 'DOWN' ? 'DOWN' : 'ONLINE'}`,
   //   html: websiteStatusTemplate({ websiteUrl, status, timestamp }),
@@ -134,7 +134,7 @@ export async function sendWebsitePingAnomalyEmail({
   await createAlert(
     to,
     JSON.stringify({
-      from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+      from: 'DPIN Uptime Alert <alert@itssvk.dev>',
       to,
       subject: `Alert: High Ping for ${websiteUrl} in ${region}`,
       html: websitePingAnomalyTemplate({
@@ -153,7 +153,7 @@ export async function sendWebsitePingAnomalyEmail({
   return;
 
   // const info = await transporter.sendMail({
-  //   from: 'DPIN Uptime Alert <alert.dpin-uptime@itssvk.dev>',
+  //   from: 'DPIN Uptime Alert <alert@itssvk.dev>',
   //   to,
   //   subject: `Alert: High Ping for ${websiteUrl} in ${region}`,
   //   html: websitePingAnomalyTemplate({

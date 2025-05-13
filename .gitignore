@@ -38,3 +38,5 @@ yarn-error.log*
 *.pem
 key.*
 backup/
+
+setup.md
