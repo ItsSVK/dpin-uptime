@@ -10,7 +10,6 @@ import {
   CheckIcon,
   CopyIcon,
 } from 'lucide-react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -143,11 +142,12 @@ export default function DashboardDetailPage({ id }: { id: string }) {
             size="icon"
             asChild
             className="cursor-pointer"
+            onClick={() => router.back()}
           >
-            <Link href="/dashboard">
+            <span className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
               <span className="sr-only">Back to dashboard</span>
-            </Link>
+            </span>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">{website.name}</h1>
           <Button

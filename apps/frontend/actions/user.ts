@@ -1,18 +1,18 @@
 'use server';
 
 import { prismaClient } from 'db/client';
-import { getUserFromJWT } from '@/lib/auth';
 import { NotificationConfig } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { getUser } from '@civic/auth-web3/nextjs';
 
 export async function updateUserEmail(email: string | null) {
-  const user = await getUserFromJWT();
+  const user = await getUser();
   if (!user) {
     throw new Error('Unauthorized');
   }
 
   const dbUser = await prismaClient.user.findUnique({
-    where: { id: user.userId },
+    where: { id: user.id },
   });
 
   if (!dbUser) {
@@ -20,7 +20,7 @@ export async function updateUserEmail(email: string | null) {
   }
 
   const updatedUser = await prismaClient.user.update({
-    where: { id: user.userId },
+    where: { id: user.id },
     data: { email: email || null },
   });
 
@@ -38,7 +38,7 @@ export async function updateNotificationConfig(
     | 'webhookSecret'
   >
 ) {
-  const user = await getUserFromJWT();
+  const user = await getUser();
   if (!user) {
     return {
       success: false,
@@ -47,7 +47,7 @@ export async function updateNotificationConfig(
   }
 
   const dbUser = await prismaClient.user.findUnique({
-    where: { id: user.userId },
+    where: { id: user.id },
   });
 
   if (!dbUser) {
@@ -61,7 +61,7 @@ export async function updateNotificationConfig(
     await prismaClient.notificationConfig.findUnique({
       where: {
         userId_websiteId: {
-          userId: user.userId,
+          userId: user.id,
           websiteId: updateConfig.websiteId,
         },
       },
@@ -88,13 +88,13 @@ export async function updateNotificationConfig(
   }
 
   const updatedUser = await prismaClient.user.update({
-    where: { id: user.userId },
+    where: { id: user.id },
     data: {
       notificationConfig: {
         upsert: {
           where: {
             userId_websiteId: {
-              userId: user.userId,
+              userId: user.id,
               websiteId: updateConfig.websiteId,
             },
           },
@@ -124,7 +124,7 @@ export async function updateNotificationConfig(
 }
 
 export async function getNotificationConfig(id: string) {
-  const user = await getUserFromJWT();
+  const user = await getUser();
   if (!user) {
     throw new Error('Unauthorized');
   }
@@ -132,7 +132,7 @@ export async function getNotificationConfig(id: string) {
   const notificationConfig = await prismaClient.notificationConfig.findUnique({
     where: {
       userId_websiteId: {
-        userId: user.userId,
+        userId: user.id,
         websiteId: id,
       },
     },

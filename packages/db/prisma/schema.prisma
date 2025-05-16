@@ -216,4 +216,5 @@ enum Region {
 enum TransactionType {
   DEPOSIT
   PAYOUT
+  TRANSFER
 }

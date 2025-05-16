@@ -22,8 +22,9 @@ import { PulseAnimation } from '@/components/pulse-animation';
 import { TrackedSite } from '@/components/tracked-site';
 import { BackgroundGradient } from '@/components/background-gradient';
 import { TextGenerateEffect } from '@/components/text-generate-effect';
-import { SignInButton } from '@/components/auth/SignInButton';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useCallback } from 'react';
 
 // Add this style tag at the top level of the page to ensure smooth scrolling
 <style jsx global>{`
@@ -45,12 +46,25 @@ export default function Home() {
   ];
   const router = useRouter();
 
+  const { appUser } = useAuth();
+
+  const hanldeGettingStarted = useCallback(() => {
+    const el = document.getElementById('home');
+    if (el) {
+      const signInButton = document.getElementById('sign-in-button');
+      if (signInButton) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        signInButton.click();
+      }
+    }
+  }, []);
+
   return (
     <main className="min-h-[calc(100vh-135px)]">
       {/* Hero Section */}
       <section id="home" className="relative overflow-hidden py-20 md:py-32">
         <BackgroundGradient />
-        <div className="container relative z-10 mx-auto w-full max-w-[1800px] px-12 md:px-6">
+        <div className="container relative z-10 mx-auto md:max-w-[calc(100%-15%)] px-12 md:px-12">
           <div className="grid gap-12 lg:grid-cols-[1fr_400px] lg:gap-16 xl:grid-cols-[1fr_450px]">
             <div className="flex flex-col justify-center space-y-4">
               <div className="inline-flex items-center rounded-lg bg-zinc-800/60 px-3 py-1 text-sm">
@@ -62,13 +76,22 @@ export default function Home() {
                   <TextGenerateEffect words="Never miss a moment when your site goes down" />
                 </h1>
                 <p className="max-w-[600px] text-zinc-400 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  dpin monitors your websites 24/7, alerting you instantly when
+                  DPIN monitors your websites 24/7, alerting you instantly when
                   they&apos;re down. Get detailed uptime stats and performance
                   metrics.
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <SignInButton />
+                {appUser ? (
+                  <Button
+                    asChild
+                    className=" bg-zinc-800 hover:bg-zinc-700 font-semibold"
+                  >
+                    <Link href="/dashboard">Continue to Dashboard</Link>
+                  </Button>
+                ) : (
+                  <></>
+                )}
               </div>
             </div>
             <div className="flex items-center justify-center">
@@ -111,7 +134,7 @@ export default function Home() {
 
       {/* Features Section */}
       <section id="features" className="py-20 md:py-32">
-        <div className="container mx-auto w-full max-w-full px-4 md:px-6">
+        <div className="container mx-auto max-w-full px-4 md:px-6">
           <div className="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-4 text-center">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
               Next-level website monitoring
@@ -143,7 +166,7 @@ export default function Home() {
 
       {/* How it works Section */}
       <section className="py-20 md:py-32 bg-zinc-950">
-        <div className="container mx-auto w-full max-w-full px-4 md:px-6">
+        <div className="container mx-auto max-w-full px-4 md:px-6">
           <div className="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-4 text-center">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
               How dpin works
@@ -193,7 +216,7 @@ export default function Home() {
 
       {/* Pricing Section */}
       <section id="pricing" className="py-20 md:py-32">
-        <div className="container mx-auto w-full max-w-full px-4 md:px-6">
+        <div className="container mx-auto max-w-full px-4 md:px-6">
           <div className="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-4 text-center">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
               Simple, transparent pricing
@@ -261,7 +284,7 @@ export default function Home() {
 
       {/* CTA Section */}
       <section className="py-20 md:py-32 bg-zinc-950">
-        <div className="container mx-auto w-full max-w-full px-4 md:px-6">
+        <div className="container mx-auto max-w-full px-4 md:px-6">
           <div className="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-4 text-center">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
               Ready to start monitoring?
@@ -271,14 +294,25 @@ export default function Home() {
               their website monitoring.
             </p>
             <div className="mt-8 flex flex-col gap-2 min-[400px]:flex-row">
-              <Button
-                size="lg"
-                className="group bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => router.push('/sign')}
-              >
-                Get started now
-                <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
+              {!appUser ? (
+                <Button
+                  size="lg"
+                  className="group bg-emerald-600 hover:bg-emerald-700 font-semibold cursor-pointer"
+                  onClick={hanldeGettingStarted}
+                >
+                  Get started now
+                  <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  className="group bg-zinc-800 hover:bg-zinc-700 font-semibold cursor-pointer"
+                  onClick={() => router.push('/dashboard')}
+                >
+                  Continue to Dashboard
+                  <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              )}
             </div>
           </div>
         </div>

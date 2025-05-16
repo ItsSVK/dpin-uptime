@@ -1,39 +1,45 @@
 'use server';
 
 import { prismaClient } from 'db/client';
-import { getUserFromJWT } from '@/lib/auth';
-import { TransactionStatus, TransactionType, User } from '@prisma/client';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+  User,
+} from '@prisma/client';
 import { getParsedTransferDetails } from '@/lib/utils';
+import { getUser } from '@civic/auth-web3/nextjs';
 
-export async function getUserBalance() {
-  const user = await getUserFromJWT();
-  if (!user) return { success: false, message: 'Unauthorized' };
+export async function getDBUserFromSession() {
+  const user = await getUser();
+  if (!user) return null;
   const dbUser = await prismaClient.user.findUnique({
-    where: { walletAddress: user.walletAddress },
-    select: { currentBalance: true },
+    where: { id: user.id },
   });
-  if (!dbUser) return { success: false, message: 'User not found' };
-  return { success: true, balance: dbUser.currentBalance };
+  if (!dbUser) return null;
+  return dbUser;
 }
 
-export async function getUserDeposits() {
-  const user = await getUserFromJWT();
+export async function getUserTransactions(transactionType: TransactionType) {
+  const user = await getUser();
+  console.log('user', user);
   if (!user) return { success: false, message: 'Unauthorized' };
 
   const dbUser = await prismaClient.user.findUnique({
-    where: { walletAddress: user.walletAddress },
+    where: { id: user.id },
   });
   if (!dbUser) return { success: false, message: 'User not found' };
 
-  const deposits = await prismaClient.transaction.findMany({
+  const transactions: Transaction[] = await prismaClient.transaction.findMany({
     where: {
       userId: dbUser!.id,
-      transactionType: TransactionType.DEPOSIT,
+      transactionType,
     },
     orderBy: { createdAt: 'desc' },
     take: 10,
   });
-  return { success: true, deposits };
+
+  return { success: true, transactions };
 }
 
 export async function createTransactionRecord({
@@ -53,7 +59,10 @@ export async function createTransactionRecord({
   if (!fromPubkey || !toPubkey)
     return { success: false, message: 'Transaction data is invalid' };
   let dbUser: User | null;
-  if (transactionType === TransactionType.DEPOSIT) {
+  if (
+    transactionType === TransactionType.DEPOSIT ||
+    transactionType === TransactionType.TRANSFER
+  ) {
     // Update user balance and create deposit record
     dbUser = await prismaClient.user.findUnique({
       where: { walletAddress: fromPubkey },
@@ -82,4 +91,15 @@ export async function createTransactionRecord({
     },
   });
   return { success: true };
+}
+
+export async function getUserBalance(): Promise<number> {
+  const user = await getUser();
+  if (!user) return 0;
+  const dbUser = await prismaClient.user.findUnique({
+    where: { id: user.id },
+    select: { currentBalance: true },
+  });
+  if (!dbUser) return 0;
+  return dbUser.currentBalance;
 }

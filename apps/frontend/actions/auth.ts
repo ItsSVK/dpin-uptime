@@ -1,25 +1,26 @@
 'use server';
 import { prismaClient } from 'db/client';
-import { SIGNINMESSAGE, verifySignature } from 'common';
-import { User } from '@prisma/client';
+import { getUser } from '@civic/auth-web3/nextjs';
 
-export async function verifySignatureAndUpsertUser(
-  signature: string,
-  publicKey: string
-): Promise<User | null> {
-  const isValid = verifySignature(
-    SIGNINMESSAGE(publicKey),
-    signature,
-    publicKey
-  );
-  if (!isValid) return null;
-  let user = await prismaClient.user.findUnique({
-    where: { walletAddress: publicKey },
-  });
-  if (!user) {
-    user = await prismaClient.user.create({
-      data: { walletAddress: publicKey },
+export async function getOrCreateDBUser(walletAddress: string) {
+  const user = await getUser();
+  if (!user) return null;
+  let dbUser = await getDBUser(walletAddress);
+  if (!dbUser) {
+    dbUser = await prismaClient.user.create({
+      data: {
+        walletAddress,
+        email: user.email,
+        id: user.id,
+      },
     });
   }
+  return dbUser;
+}
+
+async function getDBUser(walletAddress: string) {
+  const user = await prismaClient.user.findUnique({
+    where: { walletAddress },
+  });
   return user;
 }

@@ -1,18 +1,22 @@
-import { getUserBalance, getUserDeposits } from '@/actions/deposit';
+import { getUserBalance, getUserTransactions } from '@/actions/deposit';
 import DepositForm from '@/components/deposit/DepositForm';
-import { redirect } from 'next/navigation';
-import { Transaction } from '@prisma/client';
-export default async function DepositsPage() {
-  const deposits = await getUserDeposits();
-  const balance = await getUserBalance();
-  if (!deposits.success) {
-    return redirect('/');
-  }
+import { Transaction, TransactionType } from '@prisma/client';
 
+export const metadata = {
+  title: 'Deposits - DPIN Uptime',
+  description: 'View your deposits and manage your transactions',
+};
+
+export default async function DepositsPage() {
+  const deposits = await getUserTransactions(TransactionType.DEPOSIT);
+
+  console.log('deposits', deposits);
+
+  const balance = await getUserBalance();
   return (
     <DepositForm
-      deposits={deposits.deposits as Transaction[]}
-      balance={balance.balance ?? 0}
+      deposits={deposits.transactions as Transaction[]}
+      balance={balance}
     />
   );
 }

@@ -11,7 +11,6 @@ export function cn(...inputs: ClassValue[]) {
 export async function getParsedTransferDetails(txSignature: string) {
   const txInfo = await connection.getParsedTransaction(txSignature, {
     commitment: 'confirmed',
-    maxSupportedTransactionVersion: 0,
   });
 
   if (!txInfo) return { success: false, message: 'Transaction not found' };

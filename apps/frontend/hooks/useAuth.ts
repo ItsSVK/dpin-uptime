@@ -1,39 +1,43 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Cookies from 'js-cookie';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { getUserFromJWT, clearAuthCookie } from '@/lib/auth';
+import { useUser } from '@civic/auth-web3/react';
+import { useWallet } from '@civic/auth-web3/react';
+import { useRouter } from 'next/navigation';
+
+export type BaseUser = {
+  id: string;
+  email?: string;
+  username?: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+  updated_at?: Date;
+};
 
 export function useAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { connected, publicKey } = useWallet();
+  const { signIn, user, signOut: originalSignOut, isLoading } = useUser();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const router = useRouter();
+  const { address } = useWallet({ type: 'solana' });
 
-  useEffect(() => {
-    const hasValidCookies = Boolean(
-      Cookies.get(process.env.COOKIE_NAME || 'auth-token')
-    );
-
-    getUserFromJWT().then(user => {
-      if (user) {
-        setIsAuthenticated(
-          user.walletAddress === publicKey?.toString() &&
-            connected &&
-            hasValidCookies &&
-            Boolean(publicKey)
-        );
-
-        if (!isAuthenticated) {
-          clearAuthCookie();
-        }
-      } else {
-        setIsAuthenticated(false);
-      }
-    });
-  }, [connected, publicKey]);
+  const signOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await originalSignOut();
+      router.push('/');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   return {
-    isAuthenticated,
-    walletAddress: publicKey?.toString(),
+    signIn,
+    signOut,
+    address,
+    appUser: user,
+    isLoading,
+    isSigningOut,
   };
 }

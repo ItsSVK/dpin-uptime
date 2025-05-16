@@ -2,47 +2,30 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { MonitorCheck, Menu, X } from 'lucide-react';
-import { SignInButton } from '@/components/auth/SignInButton';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { usePathname, useRouter } from 'next/navigation';
-import { clearAuthCookie } from '@/lib/auth';
-import { isCookieValid } from '@/lib/auth';
-import { useEffect, useCallback, useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { publicRoutes } from '@/lib/websiteUtils';
+import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import CustomSignIn from '@/components/CustomSignin';
+import { BaseUser, useAuth } from '@/hooks/useAuth';
+import { useWallet } from '@civic/auth-web3/react';
+import { getOrCreateDBUser } from '@/actions/auth';
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { connected, publicKey } = useWallet();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { appUser, signIn, signOut, isLoading } = useAuth();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const { address } = useWallet({ type: 'solana' });
 
   useEffect(() => {
-    if (publicKey) {
-      (async () => {
-        const isValid = await isCookieValid(publicKey?.toString() ?? '');
-        if (!isValid) {
-          console.log('Clearing auth cookie 1');
-          clearAuthCookie();
-          // wallet changed, redirect to wallet connect page
-          router.push('/sign');
-        }
-      })();
-    } else if (!connected) {
-      const timeout = setTimeout(() => {
-        if (!connected) {
-          clearAuthCookie();
-          if (!publicRoutes.includes(window.location.pathname)) {
-            console.log('Redirecting to sign in');
-            router.push('/');
-          }
-        }
-      }, 1500); // wait 1.5 seconds
-
-      return () => clearTimeout(timeout);
+    async function getDBUser() {
+      if (address) {
+        await getOrCreateDBUser(address);
+      }
     }
-  }, [publicKey, connected, router]);
+    getDBUser();
+  }, [address]);
 
   const scrollToSection = useCallback((section: string, id: string) => {
     const el = document.getElementById(id);
@@ -78,6 +61,21 @@ export function Navbar() {
     [pathname, router, scrollToSection]
   );
 
+  const doSignIn = useCallback(() => {
+    setIsSigningIn(true);
+    setIsMobileMenuOpen(false);
+    signIn()
+      .then(async () => {
+        router.push('/dashboard');
+      })
+      .catch(() => {
+        console.log('Declined by user');
+      })
+      .finally(() => {
+        setIsSigningIn(false);
+      });
+  }, [signIn, router]);
+
   const navItems = [
     { label: 'Home', href: '#home' },
     { label: 'Features', href: '#features' },
@@ -100,7 +98,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-[100] border-b border-zinc-800 bg-black/80 backdrop-blur-sm">
-      <div className="container mx-auto w-full max-w-[1800px] flex h-16 items-center justify-between px-4 md:px-6">
+      <div className="container mx-auto max-w-[1800px] flex h-16 items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2">
           <MonitorCheck className="h-6 w-6 text-emerald-500" />
           <span className="text-xl font-bold tracking-tighter">
@@ -116,18 +114,28 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {!pathname.startsWith('/dashboard') ? (
-            <SignInButton />
-          ) : (
-            <WalletMultiButton className="wallet-adapter-button" />
+          {appUser && (
+            <Button
+              className="text-sm font-medium text-zinc-400 transition-colors hover:text-white cursor-pointer w-full md:w-auto justify-start md:justify-center hidden md:block"
+              onClick={() => router.push('/dashboard')}
+            >
+              Dashboard
+            </Button>
           )}
+          <CustomSignIn
+            signIn={signIn}
+            appUser={appUser as BaseUser}
+            signOut={signOut}
+            isProcessing={isSigningIn || isLoading}
+            doSignIn={doSignIn}
+            className="hidden md:block"
+          />
           <Button
             className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer hidden md:block"
             onClick={() => router.push('/payout')}
           >
             Payout
           </Button>
-
           {/* Mobile Menu Button */}
           <Button
             className="md:hidden"
@@ -147,7 +155,7 @@ export function Navbar() {
       {/* Mobile Navigation */}
       <div
         className={cn(
-          'fixed inset-x-0 top-[64px] z-[90] h-[calc(100vh-64px)] overflow-y-auto bg-black border-b border-zinc-800 transition-all duration-300 ease-in-out md:hidden',
+          'fixed inset-x-0 top-[64px] z-[90] h-[calc(100vh-64px)] overflow-y-auto bg-black border-b border-zinc-800 transition-all duration-300 ease-in-out',
           isMobileMenuOpen
             ? 'translate-y-0 opacity-100 visible'
             : '-translate-y-full opacity-0 invisible'
@@ -157,6 +165,24 @@ export function Navbar() {
           {navItems.map(item => (
             <NavButton key={item.href} href={item.href} label={item.label} />
           ))}
+
+          {appUser && (
+            <Button
+              className="text-sm font-medium text-zinc-400 transition-colors hover:text-white cursor-pointer w-full md:w-auto justify-start md:justify-center"
+              onClick={() => router.push('/dashboard')}
+            >
+              Dashboard
+            </Button>
+          )}
+          <CustomSignIn
+            signIn={signIn}
+            appUser={appUser as BaseUser}
+            signOut={signOut}
+            isProcessing={isSigningIn || isLoading}
+            doSignIn={doSignIn}
+            className="w-full justify-start mt-4"
+            avatarClassName="hidden"
+          />
           <Button
             className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer w-full justify-start mt-4"
             onClick={() => {

@@ -6,11 +6,16 @@ import { WebsiteStatus } from '@prisma/client';
 import DashboardPage from '@/components/pages/DashboardPage';
 import { hasActiveValidators } from '@/actions/website';
 import { getUserBalance } from '@/actions/deposit';
+
+export const metadata = {
+  title: 'Dashboard - DPIN Uptime',
+  description: 'View your dashboard and manage your websites',
+};
+
 export default async function WebsitesPage() {
   const response = await getWebsites();
   const hasActiveValidator = await hasActiveValidators();
   const userBalance = await getUserBalance();
-
   if (!response.success || !response.data || !hasActiveValidator.success) {
     redirect('/');
   }
@@ -40,7 +45,7 @@ export default async function WebsitesPage() {
             websites.filter(site => site.responseTime !== null).length || 0
         : 0,
     hasActiveValidator: hasActiveValidator.data || false,
-    userBalance: userBalance.balance || 0,
+    userBalance: userBalance,
   };
 
   return <DashboardPage websites={websites} stats={stats} />;

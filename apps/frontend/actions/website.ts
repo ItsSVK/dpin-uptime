@@ -3,20 +3,20 @@
 import { Website, WebsiteTick } from '@/types/website';
 import { prismaClient } from 'db/client';
 import { formatUrl } from '@/lib/url';
-import { getUserFromJWT } from '@/lib/auth';
 import {
   NotificationConfig,
   User,
   WebsiteAlertType,
   WebsiteStatus,
 } from '@prisma/client';
-import { getUserBalance } from '@/actions/deposit';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import {
   sendWebsitePingAnomalyEmail,
   sendWebsiteStatusEmail,
 } from 'common/node-mail';
 import { createAlert } from 'common/mail-util';
+import { getUser } from '@civic/auth-web3/nextjs';
+import { getDBUserFromSession } from '@/actions/deposit';
 
 interface Response<T> {
   success: boolean;
@@ -36,7 +36,7 @@ export async function getWebsite(id: string): Promise<
     }
   >
 > {
-  const user = await getUserFromJWT();
+  const user = await getUser();
   if (!user) {
     return {
       success: false,
@@ -47,7 +47,7 @@ export async function getWebsite(id: string): Promise<
   const data = await prismaClient.website.findFirst({
     where: {
       id,
-      userId: user.userId,
+      userId: user.id,
     },
     include: {
       ticks: {
@@ -58,7 +58,7 @@ export async function getWebsite(id: string): Promise<
       uptimeHistory: true,
       notificationConfig: {
         where: {
-          userId: user.userId,
+          userId: user.id,
         },
       },
       user: {
@@ -83,7 +83,7 @@ export async function getWebsite(id: string): Promise<
       ...data,
       notificationConfig: data.notificationConfig || {
         email: null,
-        userId: user.userId,
+        userId: user.id,
         websiteId: id,
         isHighPingAlertEnabled: false,
         isDownAlertEnabled: false,
@@ -98,7 +98,8 @@ export async function getWebsite(id: string): Promise<
 export async function getWebsites(): Promise<
   Response<(Website & { ticks: WebsiteTick[]; user: User })[]>
 > {
-  const user = await getUserFromJWT();
+  const user = await getUser();
+
   if (!user) {
     return {
       success: false,
@@ -108,7 +109,7 @@ export async function getWebsites(): Promise<
 
   const data = await prismaClient.website.findMany({
     where: {
-      userId: user.userId,
+      userId: user.id,
     },
     orderBy: {
       createdAt: 'desc',
@@ -131,16 +132,15 @@ export async function createWebsite(
   checkFrequency: number,
   preferredRegion?: string
 ): Promise<Response<Website>> {
-  const user = await getUserFromJWT();
-  const userBalance = await getUserBalance();
-  if (!user || !userBalance.success) {
+  const user = await getDBUserFromSession();
+  if (!user) {
     return {
       success: false,
       message: 'Unauthorized',
     };
   }
 
-  if (!userBalance.balance || userBalance.balance < 0.1 * LAMPORTS_PER_SOL) {
+  if (!user.currentBalance || user.currentBalance < 0.1 * LAMPORTS_PER_SOL) {
     return {
       success: false,
       message:
@@ -154,7 +154,7 @@ export async function createWebsite(
     data: {
       url: formattedUrl,
       name,
-      userId: user.userId,
+      userId: user.id,
       status: WebsiteStatus.UNKNOWN,
       checkFrequency,
       uptimePercentage: 100,
@@ -162,7 +162,7 @@ export async function createWebsite(
       preferredRegion: preferredRegion || undefined,
       notificationConfig: {
         create: {
-          userId: user.userId,
+          userId: user.id,
           email: null,
           isHighPingAlertEnabled: false,
           isDownAlertEnabled: false,
@@ -182,7 +182,7 @@ export async function updateWebsite(
   id: string,
   data: Partial<Website>
 ): Promise<Response<Website & { ticks: WebsiteTick[] }>> {
-  const user = await getUserFromJWT();
+  const user = await getUser();
   if (!user) {
     return {
       success: false,
@@ -190,15 +190,18 @@ export async function updateWebsite(
     };
   }
 
-  const userBalance = await getUserBalance();
-  if (!userBalance.success) {
+  const userBalance = await getDBUserFromSession();
+  if (!userBalance) {
     return {
       success: false,
       message: 'Unauthorized',
     };
   }
 
-  if (!userBalance.balance || userBalance.balance < 0.1 * LAMPORTS_PER_SOL) {
+  if (
+    !userBalance.currentBalance ||
+    userBalance.currentBalance < 0.1 * LAMPORTS_PER_SOL
+  ) {
     return {
       success: false,
       message:
@@ -209,7 +212,7 @@ export async function updateWebsite(
   const updatedData = await prismaClient.website.update({
     where: {
       id,
-      userId: user.userId,
+      userId: user.id,
     },
     data,
     include: {
@@ -224,7 +227,7 @@ export async function updateWebsite(
 }
 
 export async function deleteWebsite(ids: string[]): Promise<Response<void>> {
-  const user = await getUserFromJWT();
+  const user = await getUser();
   if (!user) {
     return {
       success: false,
@@ -255,7 +258,7 @@ export async function deleteWebsite(ids: string[]): Promise<Response<void>> {
       prismaClient.website.deleteMany({
         where: {
           id: { in: ids },
-          userId: user.userId,
+          userId: user.id,
         },
       }),
     ]);
@@ -296,7 +299,7 @@ export async function hasActiveValidators(): Promise<Response<boolean>> {
 export async function sendEmailTestAlert(
   websiteId: string
 ): Promise<Response<void>> {
-  const user = await getUserFromJWT();
+  const user = await getUser();
   let alertCount = 0;
   if (!user) {
     return {
@@ -307,7 +310,7 @@ export async function sendEmailTestAlert(
 
   const notificationConfig = await prismaClient.notificationConfig.findFirst({
     where: {
-      userId: user.userId,
+      userId: user.id,
       websiteId: websiteId,
     },
     include: {
@@ -345,7 +348,7 @@ export async function sendEmailTestAlert(
       websiteUrl: notificationConfig.website.url,
       status: 'DOWN',
       timestamp: new Date().toLocaleString(),
-      userId: user.userId,
+      userId: user.id,
       websiteId,
     });
     alertCount++;
@@ -360,7 +363,7 @@ export async function sendEmailTestAlert(
       currentPing: 100,
       averagePing: 50,
       timestamp: new Date().toLocaleString(),
-      userId: user.userId,
+      userId: user.id,
       websiteId,
     });
     alertCount++;
@@ -368,7 +371,7 @@ export async function sendEmailTestAlert(
 
   await prismaClient.user.update({
     where: {
-      id: user.userId,
+      id: user.id,
     },
     data: {
       emailAlertQuota: {
@@ -388,7 +391,7 @@ export async function sendEmailTestAlert(
 export async function sendWebhookTestAlert(
   websiteId: string
 ): Promise<Response<void>> {
-  const user = await getUserFromJWT();
+  const user = await getUser();
   if (!user) {
     return {
       success: false,
@@ -398,7 +401,7 @@ export async function sendWebhookTestAlert(
 
   const notificationConfig = await prismaClient.notificationConfig.findFirst({
     where: {
-      userId: user.userId,
+      userId: user.id,
       websiteId: websiteId,
     },
     include: {
@@ -433,7 +436,7 @@ export async function sendWebhookTestAlert(
           region: notificationConfig.website.preferredRegion || 'US',
         },
       }),
-      user.userId,
+      user.id,
       websiteId,
       WebsiteAlertType.WEBHOOK
     );
@@ -453,7 +456,7 @@ export async function sendWebhookTestAlert(
           averagePing: 50,
         },
       }),
-      user.userId,
+      user.id,
       websiteId,
       WebsiteAlertType.WEBHOOK
     );

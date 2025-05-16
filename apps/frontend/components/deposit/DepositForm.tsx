@@ -17,9 +17,9 @@ import {
   Minus,
   Plus,
   ArrowLeft,
+  Copy,
 } from 'lucide-react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@civic/auth-web3/react';
 import {
   LAMPORTS_PER_SOL,
   SystemProgram,
@@ -37,6 +37,7 @@ import { connection } from 'common';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { WalletError } from '@solana/wallet-adapter-base';
 const TREASURY_WALLET = process.env.NEXT_PUBLIC_SOLANA_KEY!;
 
 export default function DepositForm({
@@ -46,14 +47,15 @@ export default function DepositForm({
   deposits: PrismaTransaction[];
   balance: number;
 }) {
-  const { publicKey, sendTransaction, connected } = useWallet();
+  const { address, wallet } = useWallet({ type: 'solana' });
+
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       router.refresh();
     }, 10 * 1000);
 
@@ -62,9 +64,10 @@ export default function DepositForm({
 
   // Deposit handler
   const handleDeposit = async (e: React.FormEvent) => {
+    if (!wallet) return;
     e.preventDefault();
     setError(null);
-    if (!publicKey) return;
+    if (!address) return;
     if (!amount || isNaN(Number(amount)) || Number(amount) < 0.1) {
       setError('Please enter a valid amount (minimum 0.1 SOL)');
       return;
@@ -73,12 +76,12 @@ export default function DepositForm({
       setLoading(true);
       const transaction = new Transaction().add(
         SystemProgram.transfer({
-          fromPubkey: publicKey,
+          fromPubkey: new PublicKey(address),
           toPubkey: new PublicKey(TREASURY_WALLET),
           lamports: parseFloat(amount) * LAMPORTS_PER_SOL,
         })
       );
-      const signature = await sendTransaction(transaction, connection);
+      const signature = await wallet.sendTransaction(transaction, connection);
       await connection.confirmTransaction(signature, 'confirmed');
       // Record deposit in backend
       await createTransactionRecord({
@@ -86,13 +89,17 @@ export default function DepositForm({
         transactionType: TransactionType.DEPOSIT,
       });
       setAmount('');
-      // startTransition(() => {}); // Refresh balance and deposits
       toast.success('Processing transaction ...');
       router.refresh();
     } catch (error) {
-      // TODO: show error toast
       toast.error(
-        error instanceof Error ? error.message : 'An unknown error occurred'
+        error == 'WalletSignTransactionError'
+          ? 'Transaction declined'
+          : error instanceof WalletError
+            ? JSON.stringify(error.error).includes('insufficient lamports')
+              ? 'Insufficient SOL balance in wallet for this transaction'
+              : 'An unknown error occurred, please try again'
+            : 'An unknown error occurred'
       );
     } finally {
       setLoading(false);
@@ -108,10 +115,17 @@ export default function DepositForm({
           asChild
           className="cursor-pointer"
         >
-          <Link href="/dashboard">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Back to dashboard</span>
-          </Link>
+          <Button
+            variant="outline"
+            size="icon"
+            asChild
+            onClick={() => router.back()}
+          >
+            <span className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Back to dashboard</span>
+            </span>
+          </Button>
         </Button>
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Deposits</h1>
@@ -133,7 +147,7 @@ export default function DepositForm({
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-3xl font-bold text-emerald-400">
-                  {balance !== null
+                  {balance !== undefined
                     ? balance / LAMPORTS_PER_SOL + ' '
                     : '0.00 '}
                   SOL
@@ -159,12 +173,11 @@ export default function DepositForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!connected ? (
+            {!address ? (
               <div className="flex flex-col items-center gap-4">
                 <p className="text-zinc-400">
                   Connect your wallet to deposit SOL
                 </p>
-                <WalletMultiButton />
               </div>
             ) : (
               <form onSubmit={handleDeposit} className="space-y-4">
@@ -268,40 +281,96 @@ export default function DepositForm({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {deposits.length === 0 ? (
+            {deposits && deposits.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-zinc-500 text-sm">No recent transactions</p>
               </div>
             ) : (
               <ul className="divide-y divide-zinc-800">
-                {deposits.map((d, i) => (
-                  <li key={d.id || i} className="py-3 flex flex-col gap-1">
-                    <span className="text-zinc-100 font-medium">
-                      +{Number(d.amount) / LAMPORTS_PER_SOL} SOL
-                    </span>
-                    <span className="text-xs text-zinc-400">
-                      <Link
-                        href={`https://explorer.solana.com/tx/${d.signature}?cluster=${process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'}`}
-                        target="_blank"
-                        className="text-zinc-400 hover:text-zinc-300"
-                      >
-                        {d.signature.slice(0, 16)}... •{' '}
-                      </Link>
-                      {new Date(d.createdAt).toLocaleString()}
-                    </span>
-                    <span
-                      className={`text-xs ${
-                        d.status === TransactionStatus.Pending
-                          ? 'text-yellow-500'
-                          : d.status === TransactionStatus.Success
-                            ? 'text-emerald-500'
-                            : 'text-red-500'
-                      }`}
-                    >
-                      {d.status}
-                    </span>
-                  </li>
-                ))}
+                {deposits &&
+                  deposits.map((d, i) => {
+                    const toPubkey =
+                      d.instructionData && typeof d.instructionData === 'object'
+                        ? JSON.parse(JSON.stringify(d.instructionData)).toPubkey
+                        : undefined;
+                    const signature = d.signature;
+                    const status = d.status;
+                    const time = new Date(d.createdAt).toLocaleString();
+                    return (
+                      <li key={d.id || i} className="py-4 flex flex-col gap-2">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 flex-1">
+                            <div className="flex flex-col">
+                              <span className="text-xs text-zinc-400">To</span>
+                              <span className="font-mono text-zinc-200 text-sm bg-zinc-800 rounded px-2 py-1">
+                                {toPubkey
+                                  ? `${toPubkey.slice(0, 6)}...${toPubkey.slice(-4)}`
+                                  : '-'}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs text-zinc-400">
+                                Signature
+                              </span>
+                              <span className="flex items-center gap-2 font-mono text-xs text-emerald-400">
+                                <Link
+                                  href={`https://explorer.solana.com/tx/${signature}?cluster=${process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'}`}
+                                  target="_blank"
+                                  className="hover:underline hover:text-emerald-300"
+                                >
+                                  {signature?.slice(0, 8)}...
+                                  {signature?.slice(-8)}
+                                </Link>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(signature);
+                                    toast.success('Signature copied!');
+                                  }}
+                                >
+                                  <Copy className="h-3 w-3 text-zinc-400" />
+                                </Button>
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs text-zinc-400">
+                                Status
+                              </span>
+                              <span
+                                className={`text-xs font-semibold px-2 py-1 rounded-md ${
+                                  status === TransactionStatus.Pending
+                                    ? 'bg-yellow-900 text-yellow-400'
+                                    : status === TransactionStatus.Success
+                                      ? 'bg-emerald-900 text-emerald-400'
+                                      : 'bg-red-900 text-red-400'
+                                }`}
+                              >
+                                {status}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs text-zinc-400">
+                                Time
+                              </span>
+                              <span className="text-xs text-zinc-300">
+                                {time}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-xs text-zinc-400">
+                              Amount
+                            </span>
+                            <span className="text-emerald-400 font-bold text-base">
+                              +{Number(d.amount) / LAMPORTS_PER_SOL} SOL
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
               </ul>
             )}
           </CardContent>
