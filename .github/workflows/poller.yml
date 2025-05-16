@@ -81,6 +81,7 @@ jobs:
               -e SOLANA_KEYPAIR=${{ secrets.SOLANA_KEYPAIR }} \
               -e EMAIL_USER=${{ secrets.EMAIL_USER }} \
               -e EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} \
+              -e NEXT_PUBLIC_HELIUS_API_KEY=${{ secrets.NEXT_PUBLIC_HELIUS_API_KEY }} \
               --init \
               ${{ secrets.DOCKERHUB_USERNAME }}/dpin-${{ env.SERVICE_NAME }}:${{ github.sha }}
             

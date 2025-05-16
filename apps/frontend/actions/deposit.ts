@@ -22,7 +22,6 @@ export async function getDBUserFromSession() {
 
 export async function getUserTransactions(transactionType: TransactionType) {
   const user = await getUser();
-  console.log('user', user);
   if (!user) return { success: false, message: 'Unauthorized' };
 
   const dbUser = await prismaClient.user.findUnique({
