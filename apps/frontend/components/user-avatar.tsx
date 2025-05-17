@@ -124,7 +124,7 @@ export function UserAvatar({
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-zinc-800" />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem className="hover:bg-zinc-800">
             <Button
               variant="ghost"
               className="flex items-center gap-2 cursor-pointer"
@@ -134,7 +134,7 @@ export function UserAvatar({
               Profile
             </Button>
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem className="hover:bg-zinc-800">
             <Button
               variant="ghost"
               className="flex items-center gap-2 cursor-pointer"
@@ -146,7 +146,7 @@ export function UserAvatar({
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="bg-zinc-800" />
-        <DropdownMenuItem>
+        <DropdownMenuItem className="hover:bg-zinc-800">
           <Button
             variant="ghost"
             onClick={handleSignOut}

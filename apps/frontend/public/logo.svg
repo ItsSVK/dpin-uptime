@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="160" height="160" rx="32" fill="#000"/>
+  <!-- MonitorCheck Icon (Lucide) -->
+  <g>
+    <rect x="40" y="40" width="80" height="48" rx="8" stroke="#10B981" stroke-width="6" fill="none"/>
+    <path d="M56 120h48" stroke="#10B981" stroke-width="6" stroke-linecap="round"/>
+    <path d="M80 88v32" stroke="#10B981" stroke-width="6" stroke-linecap="round"/>
+    <path d="M68 64l12 12 20-20" stroke="#10B981" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg> 

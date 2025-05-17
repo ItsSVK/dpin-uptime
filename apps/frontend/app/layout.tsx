@@ -25,6 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.webmanifest" />
+      </head>
       <body className={`${inter.className} min-h-screen bg-black text-white`}>
         <Provider>
           <div className="flex min-h-screen flex-col bg-black text-white">
