@@ -24,13 +24,9 @@ export default function HomePage() {
   const { appUser } = useAuth();
 
   const hanldeGettingStarted = useCallback(() => {
-    const el = document.getElementById('home');
-    if (el) {
-      const signInButton = document.getElementById('sign-in-button');
-      if (signInButton) {
-        el.scrollIntoView({ behavior: 'smooth' });
-        signInButton.click();
-      }
+    const signInButton = document.getElementById('sign-in-button');
+    if (signInButton) {
+      signInButton.click();
     }
   }, []);
 
@@ -39,7 +35,10 @@ export default function HomePage() {
       <HomeHeroSection appUser={appUser} />
       <HomeFeaturesSection features={features} />
       <HomeHowItWorksSection />
-      <HomePricingSection />
+      <HomePricingSection
+        appUser={appUser}
+        hanldeGettingStarted={hanldeGettingStarted}
+      />
       <HomeCTASection
         appUser={appUser}
         router={router}

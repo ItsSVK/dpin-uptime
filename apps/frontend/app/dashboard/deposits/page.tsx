@@ -10,8 +10,6 @@ export const metadata = {
 export default async function DepositsPage() {
   const deposits = await getUserTransactions(TransactionType.DEPOSIT);
 
-  console.log('deposits', deposits);
-
   const balance = await getUserBalance();
   return (
     <DepositForm

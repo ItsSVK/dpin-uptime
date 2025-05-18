@@ -198,6 +198,7 @@ export function WebsiteListTable({ websites }: WebsiteListTableProps) {
                   <Link
                     href={`/dashboard/${website.id}`}
                     className="font-medium text-white hover:underline"
+                    prefetch={true}
                   >
                     {website.name}
                   </Link>

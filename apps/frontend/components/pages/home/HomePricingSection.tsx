@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import Link from 'next/link';
 import {
   Card,
   CardHeader,
@@ -11,8 +10,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet } from 'lucide-react';
+import { BaseUser } from '@/hooks/useAuth';
 
-const HomePricingSection: React.FC = () => (
+const HomePricingSection: React.FC<{
+  appUser: BaseUser | null;
+  hanldeGettingStarted: () => void;
+}> = ({ appUser, hanldeGettingStarted }) => (
   <section id="pricing" className="py-20 md:py-32">
     <div className="container mx-auto max-w-full px-4 md:px-6">
       <div className="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-4 text-center">
@@ -66,12 +69,15 @@ const HomePricingSection: React.FC = () => (
             </div>
           </CardContent>
           <CardFooter>
-            <Button
-              asChild
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold"
-            >
-              <Link href="/sign">Deposit SOL &amp; Start Monitoring</Link>
-            </Button>
+            {!appUser && (
+              <Button
+                size="lg"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold cursor-pointer"
+                onClick={hanldeGettingStarted}
+              >
+                Deposit SOL &amp; Start Monitoring
+              </Button>
+            )}
           </CardFooter>
         </Card>
       </div>

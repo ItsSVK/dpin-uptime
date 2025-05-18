@@ -114,18 +114,12 @@ export default function DepositForm({
           size="icon"
           asChild
           className="cursor-pointer"
+          onClick={() => router.back()}
         >
-          <Button
-            variant="outline"
-            size="icon"
-            asChild
-            onClick={() => router.back()}
-          >
-            <span className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Back to dashboard</span>
-            </span>
-          </Button>
+          <span className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Back to dashboard</span>
+          </span>
         </Button>
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Deposits</h1>

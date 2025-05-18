@@ -19,13 +19,19 @@ export function Navbar() {
   const { address } = useWallet({ type: 'solana' });
 
   useEffect(() => {
+    router.prefetch('/payout');
+    router.prefetch('/');
+    router.prefetch('/validator');
+  }, []);
+
+  useEffect(() => {
     async function getDBUser() {
       if (address) {
         await getOrCreateDBUser(address);
       }
     }
     getDBUser();
-  }, [address]);
+  }, [address, router]);
 
   const scrollToSection = useCallback((section: string, id: string) => {
     const el = document.getElementById(id);
@@ -62,18 +68,27 @@ export function Navbar() {
   );
 
   const doSignIn = useCallback(() => {
-    setIsSigningIn(true);
-    setIsMobileMenuOpen(false);
-    signIn()
-      .then(async () => {
-        router.push('/dashboard');
-      })
-      .catch(() => {
-        console.log('Declined by user');
-      })
-      .finally(() => {
-        setIsSigningIn(false);
-      });
+    const triggerSignIn = () => {
+      setIsSigningIn(true);
+      setIsMobileMenuOpen(false);
+      signIn()
+        .then(async () => router.push('/dashboard'))
+        .catch(() => console.log('Declined by user'))
+        .finally(() => setIsSigningIn(false));
+    };
+
+    if (window.scrollY === 0) {
+      triggerSignIn();
+    } else {
+      const onScroll = () => {
+        if (window.scrollY === 0) {
+          window.removeEventListener('scroll', onScroll);
+          triggerSignIn();
+        }
+      };
+      window.addEventListener('scroll', onScroll);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, [signIn, router]);
 
   const navItems = [
