@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@civic/auth-web3/react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -15,7 +15,15 @@ import {
   clusterApiUrl,
 } from '@solana/web3.js';
 import { toast } from 'sonner';
-import { ArrowRight, Check, Copy, Send, User2, Wallet } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  RotateCw,
+  Send,
+  User2,
+  Wallet,
+} from 'lucide-react';
 import { connection } from 'common';
 import { Spin } from '@/components/spin';
 import { createTransactionRecord } from '@/actions/deposit';
@@ -39,17 +47,25 @@ export default function ProfilePage({
   const [error, setError] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number>(0);
   const [airdropLoading, setAirdropLoading] = useState(false);
+  const [updatingBalance, setUpdatingBalance] = useState(false);
   const router = useRouter();
+
+  const updateBalance = useCallback(async () => {
+    setUpdatingBalance(true);
+    if (!address) {
+      setSolBalance(0);
+      return;
+    }
+    const bal = await connection.getBalance(new PublicKey(address));
+    setSolBalance(bal / LAMPORTS_PER_SOL);
+    setUpdatingBalance(false);
+  }, [address]);
+
   // Fetch wallet balance
   useEffect(() => {
     async function fetchBalance() {
-      if (!address) {
-        setSolBalance(0);
-        return;
-      }
       try {
-        const bal = await connection.getBalance(new PublicKey(address));
-        setSolBalance(bal / LAMPORTS_PER_SOL);
+        await updateBalance();
       } catch {
         setSolBalance(0);
       }
@@ -101,6 +117,7 @@ export default function ProfilePage({
       setAmount('');
       setRecipient('');
       toast.success('Processing transaction ...');
+      updateBalance();
       router.refresh();
     } catch (err: Error | unknown) {
       const error = err instanceof Error ? err.message : 'Unknown error';
@@ -167,13 +184,26 @@ export default function ProfilePage({
             {/* Wallet Balance */}
             <div className="flex items-center gap-2 mt-2">
               <Wallet className="h-5 w-5 text-emerald-500" />
-              <span className="text-emerald-400 font-semibold text-base">
-                {solBalance !== null ? `${solBalance.toFixed(4)} SOL` : '—'}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-emerald-400 font-semibold text-base">
+                  {solBalance !== null ? `${solBalance.toFixed(4)} SOL` : '—'}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 hover:bg-zinc-800 cursor-pointer"
+                  onClick={() => updateBalance()}
+                  disabled={updatingBalance}
+                >
+                  <RotateCw
+                    className={`h-3 w-3 ${updatingBalance ? 'animate-spin' : ''}`}
+                  />
+                </Button>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
-                className="ml-2 px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border-none cursor-pointer"
+                className="px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border-none cursor-pointer"
                 disabled={!address || airdropLoading}
                 onClick={async () => {
                   if (!address) return;
@@ -186,8 +216,6 @@ export default function ProfilePage({
                     );
                     await conn.confirmTransaction(sig, 'confirmed');
                     toast.success('Airdrop successful!');
-                    // Refresh balance
-                    setSolBalance(solBalance + 1);
                   } catch (err: Error | unknown) {
                     if (
                       err instanceof Error &&
@@ -203,6 +231,7 @@ export default function ProfilePage({
                     }
                   } finally {
                     setAirdropLoading(false);
+                    await updateBalance();
                     router.refresh();
                   }
                 }}
