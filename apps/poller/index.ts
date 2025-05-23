@@ -54,7 +54,6 @@ process.on('SIGTERM', async () => {
 serve({
   port: 8080,
   fetch(req) {
-    console.log('is Poller Healthy', isPollerHealthy);
     if (req.method === 'GET' && new URL(req.url).pathname === '/health') {
       return new Response(JSON.stringify({ healthy: isPollerHealthy }), {
         status: 200,

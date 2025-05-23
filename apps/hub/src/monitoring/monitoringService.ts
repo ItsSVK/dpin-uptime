@@ -21,7 +21,7 @@ import {
   CALLBACKS, // For validateWebsite which uses it
 } from '@/src/constants';
 import { getValidatorTier, getTierBonus } from '@/src/validator/tierUtils';
-import { updateHistoricalData } from '@/src/website/uptimeService';
+import { computeHistoricalDataPayloads } from '@/src/website/uptimeService';
 import { createAlert } from 'common/mail-util';
 
 // Define types for website and user objects used in the loop, if not already available globally
@@ -406,20 +406,21 @@ export function startMonitoring(validatorManagerInstance: ValidatorManager) {
         const totalCost = totalValidatorPayout + platformFee;
 
         if (totalCost > 0) {
-          // Ensure there's a cost before attempting transaction
+          // Compute historical data payloads outside the transaction
+          const historicalPayloads = await computeHistoricalDataPayloads(
+            website.id
+          );
           await prismaClient.$transaction(async tx => {
             await tx.user.update({
               where: { id: website.userId },
               data: { currentBalance: { decrement: totalCost } },
             });
-
             for (const { validatorId, payout } of validatorPayouts) {
               await tx.validator.update({
                 where: { id: validatorId },
                 data: { pendingPayouts: { increment: payout } },
               });
             }
-
             for (const { result, validator } of results) {
               const {
                 error,
@@ -437,24 +438,18 @@ export function startMonitoring(validatorManagerInstance: ValidatorManager) {
                 signedMessage,
                 validator.publicKey
               );
-
               if (!tickVerified) {
-                // Trust score already handled by skipping payout, but log it.
                 console.error(
                   `Signature verification failed for tick from validator ${validator.publicKey} on ${website.url}. No tick recorded.`
                 );
-                continue; // Do not record tick or update trust score if signature is bad for the tick data itself
+                continue;
               }
-
               await tx.validator.update({
                 where: { id: validator.validatorId },
                 data: {
                   trustScore: { increment: status === majorityStatus ? 1 : -1 },
                 },
               });
-              // Update the local validatorManager instance as well, if feasible or rely on next fetch for updated scores
-              // validatorManagerInstance.updateTrustScore(validator.validatorId, status === majorityStatus ? 1 : -1);
-
               await tx.websiteTick.create({
                 data: {
                   websiteId: website.id,
@@ -468,11 +463,21 @@ export function startMonitoring(validatorManagerInstance: ValidatorManager) {
                   ttfb: result.data.ttfb,
                   total: result.data.total,
                   error: result.data.error,
-                  createdAt: new Date(), // Use current date for tick creation
+                  createdAt: new Date(),
                 },
               });
             }
-            await updateHistoricalData(tx, website.id);
+            // Upsert historical data
+            if (historicalPayloads.daily) {
+              await tx.uptimeHistory.upsert(historicalPayloads.daily);
+            }
+            if (historicalPayloads.weekly) {
+              await tx.uptimeHistory.upsert(historicalPayloads.weekly);
+            }
+            if (historicalPayloads.monthly) {
+              await tx.uptimeHistory.upsert(historicalPayloads.monthly);
+            }
+            await tx.website.update(historicalPayloads.websiteUpdate);
           });
         }
 

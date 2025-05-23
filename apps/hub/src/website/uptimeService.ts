@@ -1,5 +1,6 @@
 import { Prisma, WebsiteStatus, UptimePeriod } from '@prisma/client';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
+import { prismaClient } from 'db/client';
 
 // Define interfaces used by uptime calculations
 export interface WebsiteTick {
@@ -21,7 +22,6 @@ export interface UptimeHistoryData {
 }
 
 export async function calculateHistoricalUptime(
-  tx: Prisma.TransactionClient,
   websiteId: string,
   period: UptimePeriod,
   startDate: Date
@@ -44,7 +44,7 @@ export async function calculateHistoricalUptime(
       break;
   }
 
-  const ticks = await tx.websiteTick.findMany({
+  const ticks = await prismaClient.websiteTick.findMany({
     where: {
       websiteId,
       createdAt: {
@@ -107,123 +107,123 @@ export async function calculateHistoricalUptime(
   };
 }
 
-export async function updateHistoricalData(
-  tx: Prisma.TransactionClient,
+export async function computeHistoricalDataPayloads(
   websiteId: string
-): Promise<void> {
+): Promise<{
+  daily: any | null;
+  weekly: any | null;
+  monthly: any | null;
+  websiteUpdate: any;
+}> {
   const now = new Date();
   const dailyStartDate = startOfDay(now);
   const weeklyStartDate = startOfWeek(now);
   const monthlyStartDate = startOfMonth(now);
 
   const daily = await calculateHistoricalUptime(
-    tx,
     websiteId,
     UptimePeriod.DAILY,
     dailyStartDate
   );
   const weekly = await calculateHistoricalUptime(
-    tx,
     websiteId,
     UptimePeriod.WEEKLY,
     weeklyStartDate
   );
   const monthly = await calculateHistoricalUptime(
-    tx,
     websiteId,
     UptimePeriod.MONTHLY,
     monthlyStartDate
   );
 
-  if (daily) {
-    await tx.uptimeHistory.upsert({
-      where: {
-        websiteId_period_startDate: {
-          websiteId,
-          period: UptimePeriod.DAILY,
-          startDate: dailyStartDate,
-        },
-      },
-      create: {
-        websiteId,
-        period: UptimePeriod.DAILY,
-        startDate: dailyStartDate,
-        endDate: now, // Use current date for endDate on creation/update
-        uptimePercentage: daily.uptimePercentage,
-        averageResponse: daily.averageResponse,
-        totalIncidents: daily.totalIncidents,
-        totalDowntime: daily.totalDowntime,
-      },
-      update: {
-        endDate: now,
-        uptimePercentage: daily.uptimePercentage,
-        averageResponse: daily.averageResponse,
-        totalIncidents: daily.totalIncidents,
-        totalDowntime: daily.totalDowntime,
-      },
-    });
-  }
-
-  if (weekly) {
-    await tx.uptimeHistory.upsert({
-      where: {
-        websiteId_period_startDate: {
-          websiteId,
-          period: UptimePeriod.WEEKLY,
-          startDate: weeklyStartDate,
-        },
-      },
-      create: {
-        websiteId,
-        period: UptimePeriod.WEEKLY,
-        startDate: weeklyStartDate,
-        endDate: now,
-        uptimePercentage: weekly.uptimePercentage,
-        averageResponse: weekly.averageResponse,
-        totalIncidents: weekly.totalIncidents,
-        totalDowntime: weekly.totalDowntime,
-      },
-      update: {
-        endDate: now,
-        uptimePercentage: weekly.uptimePercentage,
-        averageResponse: weekly.averageResponse,
-        totalIncidents: weekly.totalIncidents,
-        totalDowntime: weekly.totalDowntime,
-      },
-    });
-  }
-
-  if (monthly) {
-    await tx.uptimeHistory.upsert({
-      where: {
-        websiteId_period_startDate: {
-          websiteId,
-          period: UptimePeriod.MONTHLY,
-          startDate: monthlyStartDate,
-        },
-      },
-      create: {
-        websiteId,
-        period: UptimePeriod.MONTHLY,
-        startDate: monthlyStartDate,
-        endDate: now,
-        uptimePercentage: monthly.uptimePercentage,
-        averageResponse: monthly.averageResponse,
-        totalIncidents: monthly.totalIncidents,
-        totalDowntime: monthly.totalDowntime,
-      },
-      update: {
-        endDate: now,
-        uptimePercentage: monthly.uptimePercentage,
-        averageResponse: monthly.averageResponse,
-        totalIncidents: monthly.totalIncidents,
-        totalDowntime: monthly.totalDowntime,
-      },
-    });
-  }
-
-  await tx.website.update({
-    where: { id: websiteId },
-    data: { uptimePercentage: daily?.uptimePercentage ?? 0 },
-  });
+  return {
+    daily: daily
+      ? {
+          where: {
+            websiteId_period_startDate: {
+              websiteId,
+              period: UptimePeriod.DAILY,
+              startDate: dailyStartDate,
+            },
+          },
+          create: {
+            websiteId,
+            period: UptimePeriod.DAILY,
+            startDate: dailyStartDate,
+            endDate: now,
+            uptimePercentage: daily.uptimePercentage,
+            averageResponse: daily.averageResponse,
+            totalIncidents: daily.totalIncidents,
+            totalDowntime: daily.totalDowntime,
+          },
+          update: {
+            endDate: now,
+            uptimePercentage: daily.uptimePercentage,
+            averageResponse: daily.averageResponse,
+            totalIncidents: daily.totalIncidents,
+            totalDowntime: daily.totalDowntime,
+          },
+        }
+      : null,
+    weekly: weekly
+      ? {
+          where: {
+            websiteId_period_startDate: {
+              websiteId,
+              period: UptimePeriod.WEEKLY,
+              startDate: weeklyStartDate,
+            },
+          },
+          create: {
+            websiteId,
+            period: UptimePeriod.WEEKLY,
+            startDate: weeklyStartDate,
+            endDate: now,
+            uptimePercentage: weekly.uptimePercentage,
+            averageResponse: weekly.averageResponse,
+            totalIncidents: weekly.totalIncidents,
+            totalDowntime: weekly.totalDowntime,
+          },
+          update: {
+            endDate: now,
+            uptimePercentage: weekly.uptimePercentage,
+            averageResponse: weekly.averageResponse,
+            totalIncidents: weekly.totalIncidents,
+            totalDowntime: weekly.totalDowntime,
+          },
+        }
+      : null,
+    monthly: monthly
+      ? {
+          where: {
+            websiteId_period_startDate: {
+              websiteId,
+              period: UptimePeriod.MONTHLY,
+              startDate: monthlyStartDate,
+            },
+          },
+          create: {
+            websiteId,
+            period: UptimePeriod.MONTHLY,
+            startDate: monthlyStartDate,
+            endDate: now,
+            uptimePercentage: monthly.uptimePercentage,
+            averageResponse: monthly.averageResponse,
+            totalIncidents: monthly.totalIncidents,
+            totalDowntime: monthly.totalDowntime,
+          },
+          update: {
+            endDate: now,
+            uptimePercentage: monthly.uptimePercentage,
+            averageResponse: monthly.averageResponse,
+            totalIncidents: monthly.totalIncidents,
+            totalDowntime: monthly.totalDowntime,
+          },
+        }
+      : null,
+    websiteUpdate: {
+      where: { id: websiteId },
+      data: { uptimePercentage: daily?.uptimePercentage ?? 0 },
+    },
+  };
 }

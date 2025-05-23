@@ -77,7 +77,7 @@ jobs:
               --name dpin-${{ env.SERVICE_NAME }} \
               --restart unless-stopped \
               --network dpin-network \
-              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL_INTERNAL }} \
               -e SOLANA_KEYPAIR=${{ secrets.SOLANA_KEYPAIR }} \
               -e EMAIL_USER=${{ secrets.EMAIL_USER }} \
               -e EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} \
