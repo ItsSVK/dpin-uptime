@@ -14,6 +14,13 @@ export function startWebSocketServer(
 ) {
   serve<MyWebSocketData, undefined>({
     fetch(req: Request, server: Server) {
+      // Healthcheck endpoint
+      if (req.method === 'GET' && new URL(req.url).pathname === '/health') {
+        return new Response(JSON.stringify({ status: 'ok' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       const clientIp = getClientIp(req);
       // Upgrade request to WebSocket
       if (server.upgrade(req, { data: { clientIp } })) {

@@ -94,6 +94,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      hub:
+        condition: service_healthy
     volumes:
       - ./apps/poller:/app/apps/poller
       - poller_node_modules:/app/node_modules

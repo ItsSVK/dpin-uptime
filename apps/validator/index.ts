@@ -1,6 +1,7 @@
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { connectToHub } from '@/src/websocketClient';
+import { serve } from 'bun';
 
 // CALLBACKS and validatorId are now managed in @/src/state.ts
 // WebSocket event handlers (onopen, onmessage, onerror, onclose) and heartbeat are in @/src/websocketClient.ts
@@ -29,4 +30,18 @@ async function main() {
 main().catch(error => {
   console.error('Unhandled error in main execution:', error);
   process.exit(1);
+});
+
+// Start healthcheck HTTP server
+serve({
+  port: 8080,
+  fetch(req) {
+    if (req.method === 'GET' && new URL(req.url).pathname === '/health') {
+      return new Response(JSON.stringify({ healthy: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response('Not found', { status: 404 });
+  },
 });

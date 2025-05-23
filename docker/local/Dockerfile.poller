@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install required system dependencies
 RUN apt-get update && \
-    apt-get install -y postgresql-client && \
+    apt-get install -y postgresql-client curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy package files
@@ -36,5 +36,7 @@ done\n\
 echo "Starting poller service..."\n\
 cd apps/poller && bun run dev\n\
 ' > /app/start.sh && chmod +x /app/start.sh
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:8080/health || exit 1
 
 CMD ["/app/start.sh"] 

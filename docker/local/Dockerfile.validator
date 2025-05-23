@@ -37,4 +37,6 @@ echo "Starting validator service..."\n\
 cd apps/validator && bun run dev\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:8080/health || exit 1
+
 CMD ["/app/start.sh"] 

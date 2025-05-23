@@ -27,7 +27,7 @@ RUN cd apps/hub && \
 FROM oven/bun:1-alpine
 
 # Install runtime dependencies
-RUN apk add --no-cache openssl ca-certificates
+RUN apk add --no-cache openssl ca-certificates curl
 
 # Set working directory
 WORKDIR /app
@@ -67,5 +67,6 @@ RUN echo '#!/bin/sh' > start.sh && \
 # Expose the port the app runs on
 EXPOSE 8081
 
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:8081/health || exit 1
 # Use full path and verify script exists before starting
 CMD ["/bin/sh", "-c", "ls -la /app/start.sh && /app/start.sh"] 

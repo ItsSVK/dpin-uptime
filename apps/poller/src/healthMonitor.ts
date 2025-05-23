@@ -4,6 +4,7 @@ import {
   setPollerHealth,
   processingTransactions,
 } from '@/src/state';
+import { prismaClient } from 'db/client';
 
 let healthInterval: NodeJS.Timeout | null = null;
 
@@ -15,15 +16,20 @@ export const startHealthMonitoring = () => {
   console.log('Starting health monitor...');
   healthInterval = setInterval(async () => {
     const now = Date.now();
-    if (now - lastSuccessfulPoll > pollingInterval * 3) {
+    // Count pending transactions in the DB
+    const pendingCount = await prismaClient.transaction.count({
+      where: { status: 'Pending' },
+    });
+    if (pendingCount > 0 && now - lastSuccessfulPoll > pollingInterval * 3) {
       setPollerHealth(false);
       console.error(
-        '⚠️ Poller health check failed - no successful polls recently'
+        '⚠️ Poller health check failed - pending transactions exist but no successful polls recently'
       );
       // Alert mechanism could be added here
       // await sendAlert('Poller health check failed');
       processingTransactions.clear(); // Try to recover by clearing processing set
     } else {
+      setPollerHealth(true);
       // Optionally, if a cycle completes successfully elsewhere and sets pollerHealthy = true,
       // this could also set it to true if the above condition isn't met.
       // However, current logic implies successful polls in pollPendingTransactions set it to true.

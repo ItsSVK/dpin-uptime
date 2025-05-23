@@ -8,8 +8,9 @@ import {
   startTransactionPolling,
   stopTransactionPolling,
 } from '@/src/transactionProcessor';
-import { processingTransactions } from '@/src/state';
+import { processingTransactions, isPollerHealthy } from '@/src/state';
 import { startAlertPolling, stopAlertPolling } from '@/src/alertProcessor';
+import { serve } from 'bun';
 
 console.log('Initializing Poller...');
 
@@ -47,4 +48,19 @@ process.on('SIGTERM', async () => {
 
   console.log('Cleanup finished. Exiting.');
   process.exit(0);
+});
+
+// Start healthcheck HTTP server
+serve({
+  port: 8080,
+  fetch(req) {
+    console.log('is Poller Healthy', isPollerHealthy);
+    if (req.method === 'GET' && new URL(req.url).pathname === '/health') {
+      return new Response(JSON.stringify({ healthy: isPollerHealthy }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response('Not found', { status: 404 });
+  },
 });
