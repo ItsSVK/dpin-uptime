@@ -55,7 +55,7 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST_NEW }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           # Setup SSH
@@ -77,7 +77,7 @@ jobs:
               --name dpin-${{ env.SERVICE_NAME }} \
               --restart unless-stopped \
               --network dpin-network \
-              -e DATABASE_URL=${{ secrets.DATABASE_URL_INTERNAL }} \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL_INTERNAL_NEW }} \
               -e SOLANA_KEYPAIR=${{ secrets.SOLANA_KEYPAIR }} \
               -e EMAIL_USER=${{ secrets.EMAIL_USER }} \
               -e EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} \
